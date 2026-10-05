@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, UserRole, Section } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   loginAsStudent: (section: Section, name?: string, email?: string) => void;
   loginAsAdmin: (email?: string) => void;
+  loginWithGoogle: () => Promise<void>;
   registerStudent: (data: { name: string; email: string; section: Section; enrollmentNo?: string }) => void;
   logout: () => void;
   setSection: (section: Section) => void;
@@ -57,7 +59,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persistent user
+    let mounted = true;
+
+    const applySupabaseUser = (authUser: any) => {
+      if (!authUser) return false;
+
+      const metadata = authUser.user_metadata || {};
+      const fullName =
+        metadata.full_name ||
+        metadata.name ||
+        authUser.email?.split('@')[0] ||
+        'Google Student';
+
+      const googleUser: UserProfile = {
+        id: authUser.id,
+        email: authUser.email || '',
+        full_name: fullName,
+        role: 'student',
+        section: 'DS-1',
+        enrollment_no: '',
+        avatar_url:
+          metadata.avatar_url ||
+          metadata.picture ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+        created_at: authUser.created_at || new Date().toISOString()
+      };
+
+      if (mounted) {
+        setUser(googleUser);
+        setSectionState('DS-1');
+        localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(googleUser));
+      }
+
+      return true;
+    };
+
+    // Restore a real Supabase session first; fall back to the existing demo session.
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+
+      if (data.session?.user) {
+        applySupabaseUser(data.session.user);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Check local storage for persistent user
     try {
       const savedUser = localStorage.getItem('ipsa_orbit_active_user');
       if (savedUser) {
@@ -69,11 +117,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(DEFAULT_DS1_STUDENT);
         setSectionState('DS-1');
       }
-    } catch {
-      setUser(DEFAULT_DS1_STUDENT);
-    } finally {
-      setIsLoading(false);
-    }
+      } catch {
+        setUser(DEFAULT_DS1_STUDENT);
+      } finally {
+        setIsLoading(false);
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        applySupabaseUser(session.user);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const loginAsStudent = (sec: Section, name = 'Aarav Sharma', email?: string) => {
@@ -117,7 +179,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(studentUser));
   };
 
-  const logout = () => {
+  const loginWithGoogle = async () => {
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://ipsa-orbit2-0.vercel.app';
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('ipsa_orbit_active_user');
   };
@@ -140,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         loginAsStudent,
         loginAsAdmin,
+        loginWithGoogle,
         registerStudent,
         logout,
         setSection,
