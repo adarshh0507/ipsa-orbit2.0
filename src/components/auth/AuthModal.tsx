@@ -29,7 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialTab = 'student_login'
 }) => {
-  const { loginAsStudent, loginAsAdmin, registerStudent } = useAuth();
+  const { loginAsStudent, loginAsAdmin, registerStudent, loginWithGoogle } = useAuth();
   const [tab, setTab] = useState<'student_login' | 'student_register' | 'admin_login'>(initialTab);
 
   // Student Login State
@@ -63,6 +63,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const formattedName = nameGuess.charAt(0).toUpperCase() + nameGuess.slice(1);
     loginAsStudent(loginSection, formattedName, studentEmail);
     onClose();
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError(null);
+      await loginWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to start Google login. Please try again.');
+    }
   };
 
   const handleStudentRegister = (e: React.FormEvent) => {
@@ -267,6 +276,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Enter Orbit Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-slate-800" />
+                <span className="text-[11px] text-slate-500 font-medium">OR</span>
+                <div className="h-px flex-1 bg-slate-800" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm shadow-lg flex items-center justify-center gap-2 transition-all"
+              >
+                <span className="font-bold text-base">G</span>
+                Continue with Google
+              </button>
+
+              <p className="text-center text-[11px] text-slate-500">
+                Use any Google account — college email is not required.
+              </p>
             </form>
           )}
 
