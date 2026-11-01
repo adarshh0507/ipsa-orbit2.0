@@ -12,6 +12,7 @@ import {
   KnowledgeDocument,
   KnowledgeChunk,
   ChatbotLog,
+  Holiday,
   Section
 } from '@/types';
 
@@ -443,12 +444,21 @@ class OrbitStore {
   private announcements: Announcement[] = INITIAL_ANNOUNCEMENTS;
   private knowledgeDocs: KnowledgeDocument[] = INITIAL_KNOWLEDGE_DOCS;
   private chatbotLogs: ChatbotLog[] = [];
+  private holidays: Holiday[] = [];
   private listeners: Set<() => void> = new Set();
   private initialized = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.loadFromStorage();
+
+      // When the admin changes something in another tab, refresh this tab without a reload.
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'ipsa_orbit_data_v1') {
+          this.loadFromStorage();
+          this.notify();
+        }
+      });
     }
   }
 
@@ -468,6 +478,7 @@ class OrbitStore {
         if (data.announcements) this.announcements = data.announcements;
         if (data.knowledgeDocs) this.knowledgeDocs = data.knowledgeDocs;
         if (data.chatbotLogs) this.chatbotLogs = data.chatbotLogs;
+        if (data.holidays) this.holidays = data.holidays;
       }
       this.initialized = true;
     } catch {
@@ -489,7 +500,8 @@ class OrbitStore {
           studentAssignments: this.studentAssignments,
           announcements: this.announcements,
           knowledgeDocs: this.knowledgeDocs,
-          chatbotLogs: this.chatbotLogs
+          chatbotLogs: this.chatbotLogs,
+          holidays: this.holidays
         };
         localStorage.setItem('ipsa_orbit_data_v1', JSON.stringify(data));
       } catch (err) {
@@ -522,6 +534,26 @@ class OrbitStore {
   public getAnnouncements() { return [...this.announcements]; }
   public getKnowledgeDocs() { return [...this.knowledgeDocs]; }
   public getChatbotLogs() { return [...this.chatbotLogs]; }
+  public getHolidays() { return [...this.holidays]; }
+
+  // Holiday methods (admin-managed days with no classes)
+  public addHoliday(date: string, reason: string): Holiday | null {
+    if (this.holidays.some((h) => h.date === date)) return null;
+    const holiday: Holiday = {
+      id: `hol-${Date.now()}`,
+      date,
+      reason: reason.trim(),
+      created_at: new Date().toISOString()
+    };
+    this.holidays = [...this.holidays, holiday].sort((a, b) => a.date.localeCompare(b.date));
+    this.saveToStorage();
+    return holiday;
+  }
+
+  public deleteHoliday(id: string) {
+    this.holidays = this.holidays.filter((h) => h.id !== id);
+    this.saveToStorage();
+  }
 
   // Subject & Faculty methods
   public updateFaculty(updated: Faculty) {

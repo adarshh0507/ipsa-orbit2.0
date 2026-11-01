@@ -55,6 +55,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
     { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
     { label: 'Assignments', href: '/admin/assignments', icon: FileCheck2 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Holidays', href: '/admin/holidays', icon: Calendar },
     { label: 'Subjects & Faculty', href: '/admin/faculty', icon: Users },
     { label: 'Students', href: '/admin/students', icon: User },
   ];
