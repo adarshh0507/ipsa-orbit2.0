@@ -55,6 +55,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
     { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
     { label: 'Assignments', href: '/admin/assignments', icon: FileCheck2 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Holidays', href: '/admin/holidays', icon: Calendar },
     { label: 'Subjects & Faculty', href: '/admin/faculty', icon: Users },
     { label: 'Students', href: '/admin/students', icon: User },
   ];
@@ -62,8 +63,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
   const currentNav = role === 'admin' ? adminNavItems : studentNavItems;
 
   return (
-    <div className="relative min-h-screen bg-[#030712] text-slate-100 flex flex-col md:flex-row">
-      <Starfield className="opacity-30" showOrbits={false} />
+    <div
+      className={`relative min-h-screen text-slate-100 flex flex-col md:flex-row ${
+        role === 'student' ? 'bg-slate-900' : 'bg-[#030712]'
+      }`}
+    >
+      {role === 'admin' && <Starfield className="opacity-30" showOrbits={false} />}
 
       {/* Mobile Top Header */}
       <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-slate-950/90 backdrop-blur-xl border-b border-white/5">
