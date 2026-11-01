@@ -20,18 +20,18 @@ export interface Feature {
 
 export const founders: Founder[] = [
   {
-    name: 'Adarsh',
+    name: 'Pragya Parasar',
     role: 'Co-founder',
-    bio: 'Co-founder of IPSA ORBIT. Add one or two lines here about what you do and why you started it.',
-    image: '/founders/founder-1.svg',
-    imageAlt: 'Portrait of Adarsh, co-founder of IPSA ORBIT',
+    bio: 'Co-founder of IPSA ORBIT.',
+    image: '/founders/founder-1.jpg',
+    imageAlt: 'Portrait of Pragya Parasar, co-founder of IPSA ORBIT',
   },
   {
-    name: 'Co-founder name',
+    name: 'Adarsh Singh',
     role: 'Co-founder',
-    bio: 'Add one or two lines here about what your co-founder does and why they started IPSA ORBIT.',
-    image: '/founders/founder-2.svg',
-    imageAlt: 'Portrait of the second co-founder of IPSA ORBIT',
+    bio: 'Co-founder of IPSA ORBIT.',
+    image: '/founders/founder-2.jpg',
+    imageAlt: 'Portrait of Adarsh Singh, co-founder of IPSA ORBIT',
   },
 ];
 
