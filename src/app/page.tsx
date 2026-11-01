@@ -159,7 +159,7 @@ export default function LandingPage() {
                     <img
                       src={founder.image}
                       alt={founder.imageAlt}
-                      className="aspect-[4/5] w-full object-cover object-top"
+                      className="aspect-[4/5] w-1/2 object-cover object-top"
                       loading="lazy"
                     />
                   </div>
