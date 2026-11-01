@@ -146,6 +146,14 @@ export interface Announcement {
   created_at: string;
 }
 
+// A day with no classes, set by the admin. `date` is a calendar date in IST, formatted YYYY-MM-DD.
+export interface Holiday {
+  id: string;
+  date: string;
+  reason: string;
+  created_at: string;
+}
+
 export interface KnowledgeDocument {
   id: string;
   title: string;
