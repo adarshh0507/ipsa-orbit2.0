@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/brand/Logo';
 import { Starfield } from '@/components/brand/Starfield';
+import { SectionPicker } from '@/components/auth/SectionPicker';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -35,7 +36,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role = 'student' }) => {
   const pathname = usePathname();
-  const { user, section, setSection, logout, isAdmin } = useAuth();
+  const { user, section, setSection, logout, isAdmin, needsSectionChoice } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const studentNavItems = [
@@ -266,6 +267,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
         </div>
       </main>
 
+      {role === 'student' && needsSectionChoice && <SectionPicker />}
     </div>
   );
 };

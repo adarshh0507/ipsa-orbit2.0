@@ -17,6 +17,7 @@ interface AuthContextType {
   registerStudent: (data: { name: string; email: string; section: Section; enrollmentNo?: string }) => void;
   logout: () => void;
   setSection: (section: Section) => void;
+  needsSectionChoice: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -53,12 +54,15 @@ const DEFAULT_ADMIN: UserProfile = {
   created_at: '2026-07-01T00:00:00Z'
 };
 
+const sectionStorageKey = (userId: string) => `ipsa_orbit_section:${userId}`;
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [section, setSectionState] = useState<Section>('DS-1');
   const [isLoading, setIsLoading] = useState(true);
+  const [needsSectionChoice, setNeedsSectionChoice] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -73,12 +77,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authUser.email?.split('@')[0] ||
         'Student';
 
+      // Remember the section this person picked. First-time sign-ins get asked.
+      const savedSection = localStorage.getItem(sectionStorageKey(authUser.id));
+      const chosenSection: Section = savedSection === 'DS-2' ? 'DS-2' : 'DS-1';
+
       const googleUser: UserProfile = {
         id: authUser.id,
         email: authUser.email || '',
         full_name: fullName,
         role: 'student',
-        section: 'DS-1',
+        section: chosenSection,
         enrollment_no: '',
         avatar_url:
           metadata.avatar_url ||
@@ -89,7 +97,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (mounted) {
         setUser(googleUser);
-        setSectionState('DS-1');
+        setSectionState(chosenSection);
+        setNeedsSectionChoice(savedSection !== 'DS-1' && savedSection !== 'DS-2');
         localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(googleUser));
       }
 
@@ -204,12 +213,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setNeedsSectionChoice(false);
     localStorage.removeItem('ipsa_orbit_active_user');
   };
 
   const setSection = (newSection: Section) => {
     setSectionState(newSection);
+    setNeedsSectionChoice(false);
     if (user) {
+      localStorage.setItem(sectionStorageKey(user.id), newSection);
       const updated = { ...user, section: newSection };
       setUser(updated);
       localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(updated));
@@ -230,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerStudent,
         logout,
         setSection,
+        needsSectionChoice,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin'
       }}

@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { orbitStore } from '@/lib/store';
-import { SectionBadge, PriorityBadge, ResourceTypeBadge, SlotTypeBadge } from '@/components/brand/StatusBadge';
+import { SectionBadge, PriorityBadge, ResourceTypeBadge } from '@/components/brand/StatusBadge';
 import { GlassCard } from '@/components/brand/GlassCard';
+import { TodaySchedule } from '@/components/student/TodaySchedule';
 import { EmptyState } from '@/components/brand/EmptyState';
 import { 
   BookOpen, 
@@ -17,8 +18,6 @@ import {
   Bot, 
   Download, 
   ArrowRight, 
-  Clock, 
-  MapPin, 
   Sparkles,
   CheckCircle,
   AlertTriangle
@@ -33,28 +32,10 @@ export default function StudentDashboard() {
   }, []);
 
   const subjects = orbitStore.getSubjects();
-  const faculty = orbitStore.getFaculty();
   const resources = orbitStore
     .getResources()
     .filter((r) => r.is_published && (r.section === 'Both' || r.section === section))
     .slice(0, 4);
-
-  const timetableWeeks = orbitStore
-    .getTimetableWeeks()
-    .filter((w) => w.section === section && w.status === 'published');
-
-  const activeWeek = timetableWeeks[timetableWeeks.length - 1];
-  const allSlots = activeWeek
-    ? orbitStore.getTimetableSlots().filter((s) => s.week_id === activeWeek.id)
-    : [];
-
-  const days: ('Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday')[] = [
-    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-  ];
-  const todayDay = days[new Date().getDay()];
-  const todaySlots = allSlots
-    .filter((s) => s.day_of_week === (todayDay === 'Sunday' ? 'Monday' : todayDay))
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   const assignments = orbitStore
     .getAssignments()
@@ -165,68 +146,7 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Today's Timetable Widget (2 cols) */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-cyan-400" />
-                <h2 className="text-base font-bold text-white">
-                  Today's Schedule ({todayDay === 'Sunday' ? 'Monday Preview' : todayDay})
-                </h2>
-              </div>
-              <Link
-                href="/student/timetable"
-                className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
-              >
-                <span>Full Timetable</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {todaySlots.length === 0 ? (
-              <EmptyState
-                type="timetable"
-                title="No Timetable Published Yet"
-                description={`Department admin has not released the schedule for ${section}. Timetable starts blank until published by coordinator.`}
-                actionText="Check Timetable Archive"
-                actionHref="/student/timetable"
-              />
-            ) : (
-              <div className="space-y-3">
-                {todaySlots.map((slot) => {
-                  const sub = subjects.find((s) => s.id === slot.subject_id);
-                  const fac = faculty.find((f) => f.id === slot.faculty_id);
-                  return (
-                    <GlassCard
-                      key={slot.id}
-                      glow="none"
-                      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-white/5 hover:border-cyan-500/30"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center flex-shrink-0 text-center">
-                          <Clock className="w-3.5 h-3.5 text-cyan-400 mb-0.5" />
-                          <span className="text-[10px] font-mono text-cyan-300 font-bold">
-                            {slot.start_time}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white">{sub?.name || 'Class'}</span>
-                            <SlotTypeBadge type={slot.slot_type} />
-                          </div>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {fac?.name} • <span className="text-slate-300 font-medium">📍 {slot.room}</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right flex sm:flex-col items-center sm:items-end justify-between text-xs text-slate-400">
-                        <span className="font-mono text-[11px] text-slate-300">{slot.start_time} - {slot.end_time}</span>
-                        <span className="text-[10px] text-slate-500 capitalize">{slot.slot_type}</span>
-                      </div>
-                    </GlassCard>
-                  );
-                })}
-              </div>
-            )}
+            <TodaySchedule />
 
             {/* Recently Uploaded Notes Section */}
             <div className="pt-6">

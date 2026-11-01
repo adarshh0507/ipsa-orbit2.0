@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/brand/Logo';
 import { Footer } from '@/components/layout/Footer';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { OrbitDiagram } from '@/components/landing/OrbitDiagram';
-import { SignInPanel } from '@/components/landing/SignInPanel';
+import { DayOrbit } from '@/components/landing/DayOrbit';
+import { SignInModal } from '@/components/landing/SignInModal';
 import { supabase } from '@/lib/supabase';
 import { about, alsoInside, features, founders } from '@/lib/siteContent';
 
 export default function LandingPage() {
   const router = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
 
   // After Google or Facebook sends the person back here, take them to the student dashboard.
   useEffect(() => {
@@ -27,7 +29,12 @@ export default function LandingPage() {
     return () => data.subscription.unsubscribe();
   }, [router]);
 
-  const openOtherOptions = () => setAuthModalOpen(true);
+  const openSignIn = useCallback(() => setSignInOpen(true), []);
+  const closeSignIn = useCallback(() => setSignInOpen(false), []);
+  const openOtherOptions = useCallback(() => {
+    setSignInOpen(false);
+    setAuthModalOpen(true);
+  }, []);
 
   return (
     <div className="font-sans min-h-screen bg-[#060C20] text-[#E8EEFF]">
@@ -40,12 +47,13 @@ export default function LandingPage() {
             <a href="#about" className="hover:text-white">About</a>
             <a href="#founders" className="hover:text-white">Founders</a>
           </nav>
-          <a
-            href="#signin"
+          <button
+            type="button"
+            onClick={openSignIn}
             className="rounded-lg border border-[#5CE1E6]/60 px-4 py-2 text-sm font-semibold text-[#5CE1E6] hover:bg-[#5CE1E6] hover:text-[#04122B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6]"
           >
             Sign in
-          </a>
+          </button>
         </div>
       </header>
 
@@ -61,8 +69,8 @@ export default function LandingPage() {
               weekly timetable, assignments, faculty details and official notices all live here, so nobody has to dig
               through WhatsApp groups.
             </p>
-            <div id="signin" className="mt-10 scroll-mt-8">
-              <SignInPanel onOtherOptions={openOtherOptions} />
+            <div className="mt-12">
+              <DayOrbit />
             </div>
           </div>
 
@@ -183,13 +191,20 @@ export default function LandingPage() {
                 Sign in with Google or Facebook and see your timetable, notes and notices right away.
               </p>
             </div>
-            <SignInPanel onOtherOptions={openOtherOptions} heading="Get started" />
+            <button
+              type="button"
+              onClick={openSignIn}
+              className="rounded-xl bg-[#5CE1E6] px-8 py-3.5 text-sm font-bold text-[#04122B] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6]"
+            >
+              Sign in
+            </button>
           </div>
         </section>
       </main>
 
       <Footer />
 
+      <SignInModal open={signInOpen} onClose={closeSignIn} onOtherOptions={openOtherOptions} />
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialTab="student_login" />
     </div>
   );
