@@ -1,334 +1,196 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { Navbar } from '@/components/layout/Navbar';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/brand/Logo';
 import { Footer } from '@/components/layout/Footer';
-import { Starfield } from '@/components/brand/Starfield';
 import { AuthModal } from '@/components/auth/AuthModal';
-import { useAuth } from '@/context/AuthContext';
-import { 
-  Compass, 
-  BookOpen, 
-  Calendar, 
-  FileCheck2, 
-  Bell, 
-  Users, 
-  Bot, 
-  ShieldCheck, 
-  Sparkles, 
-  ArrowRight, 
-  CheckCircle2, 
-  Search, 
-  Cpu, 
-  Layers, 
-  GraduationCap, 
-  Download,
-  Clock,
-  ChevronRight,
-  ExternalLink
-} from 'lucide-react';
+import { OrbitDiagram } from '@/components/landing/OrbitDiagram';
+import { SignInPanel } from '@/components/landing/SignInPanel';
+import { supabase } from '@/lib/supabase';
+import { about, alsoInside, features, founders } from '@/lib/siteContent';
 
 export default function LandingPage() {
-  const { section, setSection } = useAuth();
+  const router = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authTab, setAuthTab] = useState<'student_login' | 'student_register' | 'admin_login'>('student_login');
 
-  const openAuth = (tab: 'student_login' | 'student_register' | 'admin_login') => {
-    setAuthTab(tab);
-    setAuthModalOpen(true);
-  };
+  // After Google or Facebook sends the person back here, take them to the student dashboard.
+  useEffect(() => {
+    const returningFromProvider =
+      window.location.hash.includes('access_token') ||
+      new URLSearchParams(window.location.search).has('code');
+    if (!returningFromProvider) return;
 
-  const orbitalNodes = [
-    { label: 'Notes & Slides', desc: 'Verified PDF & PPT repository', icon: BookOpen, color: 'text-cyan-400', border: 'border-cyan-500/30' },
-    { label: 'Smart Timetable', desc: 'Zero WhatsApp confusion', icon: Calendar, color: 'text-violet-400', border: 'border-violet-500/30' },
-    { label: 'Assignments', desc: 'Deadlines & submissions', icon: FileCheck2, color: 'text-emerald-400', border: 'border-emerald-500/30' },
-    { label: 'Faculty Directory', desc: 'Cabins & office hours', icon: Users, color: 'text-pink-400', border: 'border-pink-500/30' },
-    { label: 'Official Notices', desc: 'Exams & department alerts', icon: Bell, color: 'text-sky-400', border: 'border-sky-500/30' }
-  ];
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) router.replace('/student');
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router]);
+
+  const openOtherOptions = () => setAuthModalOpen(true);
 
   return (
-    <div className="relative min-h-screen bg-[#030712] text-slate-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* Background Cinematic Canvas */}
-      <Starfield />
-
-      {/* Top Navbar */}
-      <Navbar />
-
-      {/* HERO SECTION */}
-      <section className="relative z-10 pt-16 pb-24 md:pt-28 md:pb-36 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* Top Pill Announcement */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 text-xs font-semibold mb-8 animate-fadeIn">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span>Dedicated Academic Platform for First-Year B.Tech Data Science (DS-1 & DS-2)</span>
-          </div>
-
-          {/* Main Title & Tagline */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-6">
-            <span className="block text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.15)]">
-              IPSA ORBIT
-            </span>
-            <span className="block mt-2 bg-gradient-to-r from-cyan-400 via-indigo-300 to-violet-400 bg-clip-text text-transparent">
-              Your Campus. Your Universe.
-            </span>
-          </h1>
-
-          <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-400 leading-relaxed mb-10">
-            Everything you need for your academic journey, in one orbit. Say goodbye to searching through endless WhatsApp groups for notes, schedules, and deadlines.
-          </p>
-
-          {/* Hero CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link
-              href="/student"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Compass className="w-4 h-4" />
-              <span>Explore Orbit</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
-
-            <button
-              onClick={() => openAuth('student_login')}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
-            >
-              <GraduationCap className="w-4 h-4 text-cyan-400" />
-              <span>Student Login</span>
-            </button>
-
-            <button
-              onClick={() => openAuth('admin_login')}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-amber-500/30 text-amber-300 hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Admin Gateway</span>
-            </button>
-          </div>
-
-          {/* Interactive 3D Orbital Universe Map Preview */}
-          <div className="relative max-w-4xl mx-auto">
-            <div className="relative rounded-2xl p-6 md:p-8 bg-slate-950/60 border border-cyan-500/20 backdrop-blur-xl shadow-2xl shadow-cyan-950/40">
-              {/* Inner ambient orbital ring */}
-              <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-              
-              <div className="flex items-center justify-between pb-6 border-b border-white/5 flex-wrap gap-4">
-                <div className="text-left">
-                  <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest">
-                    Orbital Synchronization
-                  </span>
-                  <h3 className="text-lg font-bold text-white">Academic Constellation Map</h3>
-                </div>
-                {/* Active Section selector */}
-                <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
-                  <span className="text-xs text-slate-400">Current Target:</span>
-                  <button
-                    onClick={() => setSection('DS-1')}
-                    className={`px-2.5 py-0.5 rounded text-xs font-bold transition-all ${
-                      section === 'DS-1' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
-                    }`}
-                  >
-                    DS-1
-                  </button>
-                  <button
-                    onClick={() => setSection('DS-2')}
-                    className={`px-2.5 py-0.5 rounded text-xs font-bold transition-all ${
-                      section === 'DS-2' ? 'bg-violet-500 text-white' : 'text-slate-400'
-                    }`}
-                  >
-                    DS-2
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid of Orbit Nodes */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-6">
-                {orbitalNodes.map((node, idx) => {
-                  const Icon = node.icon;
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded-xl bg-slate-900/40 border ${node.border} text-left transition-all duration-300 hover:bg-slate-900/80 hover:-translate-y-1 group`}
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-slate-800/80 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <Icon className={`w-5 h-5 ${node.color}`} />
-                      </div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
-                        {node.label}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-1">{node.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+    <div className="font-sans min-h-screen bg-[#060C20] text-[#E8EEFF]">
+      {/* Header */}
+      <header className="border-b border-[#223260]/70">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <Logo size="md" showTagline={false} />
+          <nav aria-label="Page sections" className="hidden items-center gap-8 text-sm text-[#8A98C0] md:flex">
+            <a href="#app" className="hover:text-white">What it does</a>
+            <a href="#about" className="hover:text-white">About</a>
+            <a href="#founders" className="hover:text-white">Founders</a>
+          </nav>
+          <a
+            href="#signin"
+            className="rounded-lg border border-[#5CE1E6]/60 px-4 py-2 text-sm font-semibold text-[#5CE1E6] hover:bg-[#5CE1E6] hover:text-[#04122B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6]"
+          >
+            Sign in
+          </a>
         </div>
-      </section>
+      </header>
 
-      {/* SECTION: ONE PLATFORM. EVERYTHING CONNECTED. */}
-      <section id="features" className="relative z-10 py-20 border-t border-white/5 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-bold text-cyan-400 tracking-widest uppercase">
-              Unified Academic Infrastructure
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-white mt-2 mb-4">
-              One Platform. Everything Connected.
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-              Designed specifically around the first-year syllabus of IPS Academy Indore. No scattered links, no lost PDF drives, and no outdated schedules.
+      <main>
+        {/* Hero */}
+        <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-8 lg:py-24">
+          <div>
+            <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
+              Your whole class, in one place.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#8A98C0]">
+              IPSA ORBIT is a web app for first-year B.Tech Data Science students at IPS Academy Indore. Notes, the
+              weekly timetable, assignments, faculty details and official notices all live here, so nobody has to dig
+              through WhatsApp groups.
             </p>
+            <div id="signin" className="mt-10 scroll-mt-8">
+              <SignInPanel onOtherOptions={openOtherOptions} />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Card 1: Notes & Resources */}
-            <div className="rounded-2xl p-7 bg-slate-900/40 border border-white/5 hover:border-cyan-500/30 transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center mb-6 text-cyan-400">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
-                Notes & Resource Library
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Direct access to lecture notes, PPT slides, PYQs with solved answers, and practical files categorized by subject and faculty.
-              </p>
-              <Link
-                href="/student/notes"
-                className="inline-flex items-center text-xs font-semibold text-cyan-400 hover:text-cyan-300 gap-1"
-              >
-                <span>Browse Resource Hub</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            {/* Card 2: Smart Timetable */}
-            <div className="rounded-2xl p-7 bg-slate-900/40 border border-white/5 hover:border-violet-500/30 transition-all group">
-              <div className="w-12 h-12 rounded-xl bg-violet-950/80 border border-violet-500/30 flex items-center justify-center mb-6 text-violet-400">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-violet-300 transition-colors">
-                Dynamic Timetable System
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Clean weekly view with room numbers, lab allocations, and historical archives. Admin next-week continuity workflow eliminates manual rework.
-              </p>
-              <Link
-                href="/student/timetable"
-                className="inline-flex items-center text-xs font-semibold text-violet-400 hover:text-violet-300 gap-1"
-              >
-                <span>View Weekly Schedule</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-
+          <div className="flex justify-center lg:justify-end">
+            <OrbitDiagram />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* SECTION: BUILT FOR IPS ACADEMY DATA SCIENCE STUDENTS */}
-      <section className="relative z-10 py-20 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl p-8 md:p-12 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/50 border border-cyan-500/30 relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* What it does */}
+        <section id="app" className="scroll-mt-8 border-t border-[#223260]/70 py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h2 className="font-display max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
+              What the app does
+            </h2>
+            <p className="mt-4 max-w-xl text-[#8A98C0]">
+              Everything a student checks every day, in one app that works on a phone or a laptop.
+            </p>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">
-                  Tailored Academic Curriculum
-                </span>
-                <h2 className="text-3xl font-black text-white mt-2 mb-4">
-                  Built For First-Year B.Tech Data Science (DS-1 & DS-2)
-                </h2>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Pre-configured with official IPS Academy faculty mappings and laboratory locations:
+            <div className="mt-16 space-y-24">
+              {features.map((feature, i) => (
+                <div key={feature.title} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                  <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+                    <h3 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{feature.title}</h3>
+                    <p className="mt-4 max-w-lg leading-relaxed text-[#8A98C0]">{feature.body}</p>
+                    <ul className="mt-6 space-y-3">
+                      {feature.points.map((point) => (
+                        <li key={point} className="flex gap-3 text-[#E8EEFF]">
+                          <span aria-hidden="true" className="mt-2.5 h-px w-4 shrink-0 bg-[#FFB454]" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
+                    <div className="overflow-hidden rounded-xl border border-[#223260] bg-[#07102A] shadow-2xl shadow-black/40">
+                      <div className="flex items-center gap-1.5 border-b border-[#223260] px-4 py-3" aria-hidden="true">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#223260]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#223260]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#223260]" />
+                      </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={feature.image} alt={feature.imageAlt} className="block h-auto w-full" loading="lazy" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-24 grid gap-8 border-t border-[#223260]/70 pt-10 sm:grid-cols-3">
+              {alsoInside.map((item) => (
+                <div key={item.title}>
+                  <h3 className="font-display text-lg font-semibold">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-[#8A98C0]">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* About */}
+        <section id="about" className="scroll-mt-8 border-t border-[#223260]/70 bg-[#0A1330] py-20">
+          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-20 lg:px-8">
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{about.heading}</h2>
+            <div>
+              {about.paragraphs.map((p) => (
+                <p key={p} className="mb-5 max-w-xl text-lg leading-relaxed text-[#C3CDEE]">
+                  {p}
                 </p>
-
-                <div className="space-y-3 text-xs">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span><strong>Linear Algebra (LA):</strong> Dr. Reena Joshi</span>
+              ))}
+              <dl className="mt-8 divide-y divide-[#223260] border-y border-[#223260]">
+                {about.facts.map((fact) => (
+                  <div key={fact.label} className="flex justify-between gap-6 py-3 text-sm">
+                    <dt className="text-[#8A98C0]">{fact.label}</dt>
+                    <dd className="text-right font-medium">{fact.value}</dd>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span><strong>Optics & Modern Physics (OMP):</strong> Dr. Kavita Soni (DS-1) & Dr. Shivendra Tiwari (DS-2)</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span><strong>Engineering Graphics (EG):</strong> Mr. Amit Chandak</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span><strong>Basic Civil Engineering (BCE):</strong> Dr. Devaanshi Jagwani</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/60 border border-white/5">
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span><strong>Programming for Problem Solving (PPS):</strong> Mr. Amit Shrivastava</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-6 rounded-2xl bg-slate-900/80 border border-white/10 backdrop-blur-md">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Cpu className="w-4 h-4 text-cyan-400" />
-                      Laboratory Infrastructure
-                    </h4>
-                    <span className="text-[11px] text-slate-400 font-mono">IPS Academy</span>
-                  </div>
-                  <ul className="space-y-2 text-xs text-slate-300">
-                    <li className="flex justify-between py-1 border-b border-white/5">
-                      <span>OMP Optics Lab:</span>
-                      <span className="text-cyan-300 font-semibold">Science Block Lab 2</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b border-white/5">
-                      <span>EG CAD Center:</span>
-                      <span className="text-cyan-300 font-semibold">CAD Center Lab 1</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b border-white/5">
-                      <span>PPS Computing Center:</span>
-                      <span className="text-cyan-300 font-semibold">Turing Computer Lab 3</span>
-                    </li>
-                    <li className="flex justify-between py-1 border-b border-white/5">
-                      <span>BCE Survey Yard:</span>
-                      <span className="text-cyan-300 font-semibold">Civil Survey Lab</span>
-                    </li>
-                    <li className="flex justify-between py-1">
-                      <span>EC Core Workshop:</span>
-                      <span className="text-cyan-300 font-semibold">EC Workshop Block</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="p-4 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-xs">
-                  <div>
-                    <p className="font-semibold text-cyan-300">Ready to enter your academic orbit?</p>
-                    <p className="text-slate-400 text-[11px]">Instant access with your college credentials.</p>
-                  </div>
-                  <button
-                    onClick={() => openAuth('student_login')}
-                    className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
-                  >
-                    Enter Now
-                  </button>
-                </div>
-              </div>
+                ))}
+              </dl>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
+        {/* Founders */}
+        <section id="founders" className="scroll-mt-8 border-t border-[#223260]/70 py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Meet the founders</h2>
+            <p className="mt-4 max-w-xl text-[#8A98C0]">The two people building IPSA ORBIT.</p>
+
+            <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:max-w-4xl">
+              {founders.map((founder) => (
+                <figure key={founder.name}>
+                  <div className="overflow-hidden rounded-2xl border border-[#223260] bg-[#0E1A3D]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={founder.image}
+                      alt={founder.imageAlt}
+                      className="aspect-[4/5] w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                  <figcaption className="mt-5">
+                    <p className="font-display text-2xl font-semibold">{founder.name}</p>
+                    <p className="text-sm font-medium text-[#FFB454]">{founder.role}</p>
+                    <p className="mt-3 max-w-sm leading-relaxed text-[#8A98C0]">{founder.bio}</p>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Closing sign-in */}
+        <section className="border-t border-[#223260]/70 bg-[#0A1330] py-20">
+          <div className="mx-auto flex max-w-7xl flex-col items-start gap-10 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div className="max-w-lg">
+              <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Open your section’s orbit</h2>
+              <p className="mt-4 text-[#8A98C0]">
+                Sign in with Google or Facebook and see your timetable, notes and notices right away.
+              </p>
+            </div>
+            <SignInPanel onOtherOptions={openOtherOptions} heading="Get started" />
+          </div>
+        </section>
+      </main>
+
       <Footer />
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialTab={authTab}
-      />
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialTab="student_login" />
     </div>
   );
 }

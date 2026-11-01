@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, UserRole, Section } from '@/types';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
@@ -12,6 +13,7 @@ interface AuthContextType {
   loginAsStudent: (section: Section, name?: string, email?: string) => void;
   loginAsAdmin: (email?: string) => void;
   loginWithGoogle: () => Promise<void>;
+  loginWithFacebook: () => Promise<void>;
   registerStudent: (data: { name: string; email: string; section: Section; enrollmentNo?: string }) => void;
   logout: () => void;
   setSection: (section: Section) => void;
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    const applySupabaseUser = (authUser: any) => {
+    const applySupabaseUser = (authUser: User | null | undefined) => {
       if (!authUser) return false;
 
       const metadata = authUser.user_metadata || {};
@@ -69,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         metadata.full_name ||
         metadata.name ||
         authUser.email?.split('@')[0] ||
-        'Google Student';
+        'Student';
 
       const googleUser: UserProfile = {
         id: authUser.id,
@@ -104,9 +106,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Check local storage for persistent user
       try {
-        // Check local storage for persistent user
-    try {
       const savedUser = localStorage.getItem('ipsa_orbit_active_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser) as UserProfile;
@@ -179,14 +180,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(studentUser));
   };
 
-  const loginWithGoogle = async () => {
+  const loginWithProvider = async (provider: 'google' | 'facebook') => {
     const redirectTo =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://ipsa-orbit2-0.vercel.app';
 
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: {
         redirectTo
       }
@@ -196,6 +197,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
+
+  const loginWithGoogle = () => loginWithProvider('google');
+  const loginWithFacebook = () => loginWithProvider('facebook');
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -222,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginAsStudent,
         loginAsAdmin,
         loginWithGoogle,
+        loginWithFacebook,
         registerStudent,
         logout,
         setSection,
