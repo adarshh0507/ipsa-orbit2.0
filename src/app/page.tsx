@@ -148,25 +148,25 @@ export default function LandingPage() {
         {/* Founders */}
         <section id="founders" className="scroll-mt-8 border-t border-[#223260]/70 py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Meet the founders</h2>
-            <p className="mt-4 max-w-xl text-[#8A98C0]">The two people building IPSA ORBIT.</p>
+            <h2 className="font-display text-center text-3xl font-bold tracking-tight sm:text-4xl">Meet the founders</h2>
+            <p className="mx-auto mt-4 max-w-xl text-center text-[#8A98C0]">The two people building IPSA ORBIT.</p>
 
-            <div className="mt-12 grid gap-10 sm:grid-cols-2 lg:max-w-4xl">
+            <div className="mt-12 flex flex-wrap justify-center gap-10 sm:gap-14">
               {founders.map((founder) => (
-                <figure key={founder.name}>
+                <figure key={founder.name} className="w-full max-w-[260px]">
                   <div className="overflow-hidden rounded-2xl border border-[#223260] bg-[#0E1A3D]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={founder.image}
                       alt={founder.imageAlt}
-                      className="aspect-[4/5] w-1/2 object-cover object-top"
+                      className="block aspect-[4/5] w-full object-cover object-top"
                       loading="lazy"
                     />
                   </div>
-                  <figcaption className="mt-5">
+                  <figcaption className="mt-5 text-center">
                     <p className="font-display text-2xl font-semibold">{founder.name}</p>
                     <p className="text-sm font-medium text-[#FFB454]">{founder.role}</p>
-                    <p className="mt-3 max-w-sm leading-relaxed text-[#8A98C0]">{founder.bio}</p>
+                    <p className="mx-auto mt-3 max-w-xs leading-relaxed text-[#8A98C0]">{founder.bio}</p>
                   </figcaption>
                 </figure>
               ))}
