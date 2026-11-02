@@ -42,6 +42,15 @@ const studentNavItems = [
   { label: 'My Profile', href: '/student/profile', icon: User },
 ];
 
+// Bottom tab bar on phones (student side only)
+const mobileTabs = [
+  { label: 'Home', href: '/student', icon: House },
+  { label: 'Notes', href: '/student/notes', icon: BookOpen },
+  { label: 'Classes', href: '/student/timetable', icon: CalendarDays },
+  { label: 'Tasks', href: '/student/assignments', icon: SquareCheckBig },
+  { label: 'Profile', href: '/student/profile', icon: User },
+];
+
 const adminNavItems = [
   { label: 'Overview', href: '/admin', icon: House },
   { label: 'Timetable Manager', href: '/admin/timetable', icon: CalendarDays },
@@ -85,7 +94,7 @@ function SectionDropdown({ section, onChange }: { section: Section; onChange: (s
       >
         <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" aria-hidden="true" />
         <span className="whitespace-nowrap">
-          <span className="hidden sm:inline">Semester 1 - </span>
+          <span>Semester 1 - </span>
           {section}
         </span>
         <ChevronDown className="h-4 w-4 text-muted" aria-hidden="true" />
@@ -224,54 +233,104 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
       {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/60 md:hidden" onClick={closeSidebar} aria-hidden="true" />}
 
       {/* Main */}
-      <main className="relative z-10 flex min-h-screen flex-1 flex-col md:pl-64">
+      <main
+        className={`relative z-10 flex min-h-screen flex-1 flex-col md:pl-64 ${role === 'student' ? 'pb-20 md:pb-0' : ''}`}
+      >
         {/* Top bar */}
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-page/90 px-4 py-3 backdrop-blur-md sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
-            className="rounded-lg p-2 text-ink hover:bg-panel md:hidden"
-          >
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
+        <div className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur-md">
+          <div className="flex items-center gap-2 px-4 py-2.5 sm:px-6 md:gap-3 md:py-3 lg:px-8">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+              className="-ml-1.5 rounded-lg p-2 text-ink hover:bg-panel md:hidden"
+            >
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            </button>
 
-          <div className="hidden min-w-0 flex-1 sm:block">
+            {/* Phone: logo in the top bar (the sidebar is hidden there) */}
+            <div className="md:hidden">
+              <Logo size="sm" showTagline={false} />
+            </div>
+
+            <div className="hidden min-w-0 flex-1 md:block">
+              <GlobalSearch role={role} />
+            </div>
+            <div className="flex-1 md:hidden" />
+
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="hidden md:block">
+                <SectionDropdown section={section} onChange={setSection} />
+              </div>
+              <ThemeToggle />
+              <Link
+                href={`${base}/announcements`}
+                aria-label={recentNotices > 0 ? `Notices, ${recentNotices} new` : 'Notices'}
+                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-line bg-panel text-ink hover:border-accent md:h-11 md:w-11"
+              >
+                <Bell className="h-5 w-5" aria-hidden="true" />
+                {recentNotices > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                    {recentNotices}
+                  </span>
+                )}
+              </Link>
+              <Link
+                href={`${base}/profile`}
+                aria-label="My profile"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-panel text-base font-bold text-ink hover:border-accent md:h-11 md:w-11"
+              >
+                {initial}
+              </Link>
+            </div>
+          </div>
+
+          {/* Phone: search and semester chip sit under the logo row */}
+          <div className="space-y-2.5 px-4 pb-3 md:hidden">
             <GlobalSearch role={role} />
-          </div>
-          <div className="flex-1 sm:hidden" />
-
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <SectionDropdown section={section} onChange={setSection} />
-            <ThemeToggle />
-            <Link
-              href={`${base}/announcements`}
-              aria-label={recentNotices > 0 ? `Notices, ${recentNotices} new` : 'Notices'}
-              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-line bg-panel text-ink hover:border-accent"
-            >
-              <Bell className="h-5 w-5" aria-hidden="true" />
-              {recentNotices > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
-                  {recentNotices}
-                </span>
-              )}
-            </Link>
-            <Link
-              href={`${base}/profile`}
-              aria-label="My profile"
-              className="hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-panel text-base font-bold text-ink hover:border-accent sm:flex"
-            >
-              {initial}
-            </Link>
+            <div className="flex justify-center">
+              <SectionDropdown section={section} onChange={setSection} />
+            </div>
           </div>
         </div>
 
-        <div className="border-b border-line px-4 py-3 sm:hidden">
-          <GlobalSearch role={role} />
-        </div>
-
-        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:px-8 lg:py-6">{children}</div>
       </main>
+
+      {/* Phone only: bottom tab bar for students */}
+      {role === 'student' && (
+        <nav
+          aria-label="Quick tabs"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+        >
+          <ul className="grid grid-cols-5">
+            {mobileTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = tab.href === base ? pathname === base : pathname.startsWith(tab.href);
+              return (
+                <li key={tab.href}>
+                  <Link
+                    href={tab.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${
+                      isActive ? 'text-accent' : 'text-muted'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                        isActive ? 'bg-accent/15' : ''
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span>{tab.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
 
       {role === 'student' && needsSectionChoice && <SectionPicker />}
     </div>

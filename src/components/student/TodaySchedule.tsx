@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Code,
   Coffee,
   DraftingCompass,
@@ -82,7 +83,12 @@ function StatusPill({ status, block, minutes }: { status: BlockStatus; block: Cl
       </span>
     );
   }
-  return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel px-2.5 py-1 text-xs font-semibold text-ink-soft">
+      <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+      Upcoming
+    </span>
+  );
 }
 
 function LectureCard({ block, status, minutes }: { block: ClassBlock; status: BlockStatus; minutes: number }) {
@@ -103,22 +109,28 @@ function LectureCard({ block, status, minutes }: { block: ClassBlock; status: Bl
           : 'border-line bg-panel-alt';
 
   return (
-    <div className={`flex min-h-[190px] flex-col rounded-2xl border p-5 ${frame}`}>
+    <div className={`flex flex-col rounded-2xl border p-4 ${frame}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-base font-semibold text-ink">{block.label}</p>
-          <p className="mt-1 text-lg font-bold text-ink">{formatRange(block.startMin, block.endMin)}</p>
+          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+            {status === 'live' && <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />}
+            {block.label}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm font-bold text-ink">
+            <Clock className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+            {formatRange(block.startMin, block.endMin)}
+          </p>
         </div>
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
-          <Icon className="h-6 w-6" aria-hidden="true" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
+          <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
       </div>
 
-      <div className="mt-4 flex-1 space-y-3">
+      <div className="mt-3 flex-1 space-y-2.5">
         {block.periods.map((period, i) => (
           <div key={`${period.title}-${i}`}>
-            <p className={`font-bold leading-snug text-ink ${i === 0 ? 'text-xl' : 'text-base'}`}>{period.title}</p>
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+            <p className={`font-bold leading-snug text-ink ${i === 0 ? 'text-lg' : 'text-base'}`}>{period.title}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
               {period.faculty && (
                 <span className="inline-flex items-center gap-1.5">
                   <User className="h-4 w-4" aria-hidden="true" />
@@ -136,7 +148,7 @@ function LectureCard({ block, status, minutes }: { block: ClassBlock; status: Bl
         ))}
       </div>
 
-      <div className="mt-4 min-h-6">
+      <div className="mt-3 min-h-6">
         <StatusPill status={status} block={block} minutes={minutes} />
         {status === 'live' && (
           <div className="mt-2.5">
@@ -165,7 +177,7 @@ export function TodaySchedule() {
 
   // Before the browser clock is available (server render), show a quiet placeholder.
   if (tick === 0) {
-    return <div className="h-96 animate-pulse rounded-3xl border border-line bg-panel/60" />;
+    return <div className="h-72 animate-pulse rounded-3xl border border-line bg-panel/60" />;
   }
 
   const now = new Date(tick * TICK_MS);
@@ -226,13 +238,13 @@ export function TodaySchedule() {
   }
 
   return (
-    <section className="rounded-3xl border border-line bg-panel/80 p-5 shadow-[var(--card-shadow)] backdrop-blur-xl sm:p-6">
+    <section className="sm:rounded-3xl sm:border sm:border-line sm:bg-panel/80 sm:p-5 sm:shadow-[var(--card-shadow)] sm:backdrop-blur-xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
-            <CalendarDays className="h-6 w-6" aria-hidden="true" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
+            <CalendarDays className="h-5 w-5" aria-hidden="true" />
           </span>
-          <h2 className="font-display text-2xl font-bold text-ink">{heading}</h2>
+          <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">{heading}</h2>
         </div>
 
         <label className="relative">
@@ -254,7 +266,7 @@ export function TodaySchedule() {
       </div>
 
       <p
-        className={`mt-4 flex items-center gap-3 rounded-full px-5 py-2.5 text-base font-medium ${
+        className={`mt-3 flex items-center gap-3 rounded-full px-4 py-2 text-sm font-medium ${
           isSunday && !picked ? 'bg-accent-2/15 text-accent-2' : 'bg-panel-alt text-ink'
         }`}
       >
@@ -262,13 +274,13 @@ export function TodaySchedule() {
         <span>{banner}</span>
       </p>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
         {schedule.blocks.map((block, i) => (
           <LectureCard key={block.id} block={block} status={statuses[i]} minutes={minutes} />
         ))}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs text-muted sm:text-sm">
         <span className={`inline-flex items-center gap-2 ${onLunch ? 'font-semibold text-accent-2' : ''}`}>
           <Coffee className="h-4 w-4" aria-hidden="true" />
           Lunch, {formatRange(LUNCH.startMin, LUNCH.endMin)}

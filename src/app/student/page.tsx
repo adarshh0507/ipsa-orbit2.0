@@ -11,6 +11,7 @@ import { orbitStore } from '@/lib/store';
 import { TICK_MS, useClockTick } from '@/lib/useClock';
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   BookOpen,
   CalendarDays,
@@ -63,19 +64,26 @@ export default function StudentDashboard() {
   const urgentNotices = announcements.filter((a) => a.priority === 'urgent' && isRecent(a.created_at, 3));
   const newNotices = announcements.filter((a) => isRecent(a.created_at, 7)).length;
 
-  const actionButtons: { kind: PopupKind; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { kind: 'quick', label: 'Quick Access', icon: <Zap className="h-6 w-6" aria-hidden="true" /> },
+  const actionButtons: { kind: PopupKind; label: string; hint: string; icon: React.ReactNode; badge?: number }[] = [
+    { kind: 'quick', label: 'Quick Access', hint: 'Explore now', icon: <Zap className="h-6 w-6" aria-hidden="true" /> },
     {
       kind: 'assignments',
       label: `Pending Assignments (${assignments.length})`,
+      hint: 'View details',
       icon: <SquareCheckBig className="h-6 w-6" aria-hidden="true" />,
     },
-    { kind: 'notices', label: 'Latest Notices', icon: <Bell className="h-6 w-6" aria-hidden="true" />, badge: newNotices },
+    {
+      kind: 'notices',
+      label: 'Latest Notices',
+      hint: 'Check updates',
+      icon: <Bell className="h-6 w-6" aria-hidden="true" />,
+      badge: newNotices,
+    },
   ];
 
   return (
     <DashboardLayout role="student">
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-5">
         {/* Hero with the IPS Academy building */}
         <section className="relative isolate overflow-hidden rounded-3xl border border-line bg-panel-alt">
           <Image
@@ -90,14 +98,15 @@ export default function StudentDashboard() {
             aria-hidden="true"
             className="absolute inset-0 -z-10 bg-gradient-to-r from-[var(--hero-fade)] via-[var(--hero-fade)]/85 to-transparent sm:via-[var(--hero-fade)]/60"
           />
-          <div className="max-w-xl px-6 py-10 sm:px-10 sm:py-14">
-            <h1 className="font-display text-3xl font-extrabold leading-tight text-ink sm:text-5xl">
+          <div className="max-w-xl px-5 py-6 sm:px-9 sm:py-8">
+            <h1 className="font-display text-2xl font-extrabold leading-tight text-ink sm:text-4xl">
               Welcome back,
               <span className="block bg-gradient-to-r from-accent-strong to-accent-2 bg-clip-text pb-1 text-transparent">
                 {user?.full_name || 'Student'} <span aria-hidden="true">👋</span>
               </span>
             </h1>
-            <p className="mt-4 text-base italic text-ink-soft sm:text-lg">Keep learning. Keep growing. You&apos;ve got this!</p>
+            <span aria-hidden="true" className="mt-2 block h-0.5 w-12 rounded-full bg-accent-strong" />
+            <p className="mt-3 text-sm italic text-ink-soft sm:text-base">Keep learning. Keep growing. You&apos;ve got this!</p>
           </div>
         </section>
 
@@ -130,12 +139,18 @@ export default function StudentDashboard() {
               key={b.kind}
               type="button"
               onClick={() => setOpenPopup(b.kind)}
-              className="relative flex items-center gap-4 rounded-full border border-line bg-panel px-5 py-3.5 text-left shadow-[var(--card-shadow)] transition-colors hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="relative flex items-center gap-3.5 rounded-2xl border border-line bg-panel px-4 py-3 text-left shadow-[var(--card-shadow)] transition-colors hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">{b.icon}</span>
-              <span className="text-base font-bold text-ink">{b.label}</span>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">{b.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold leading-snug text-ink">{b.label}</span>
+                <span className="mt-0.5 flex items-center gap-1 text-sm font-medium text-accent">
+                  {b.hint}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </span>
+              </span>
               {b.badge ? (
-                <span className="absolute right-4 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                <span className="absolute right-3 top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
                   {b.badge}
                 </span>
               ) : null}
