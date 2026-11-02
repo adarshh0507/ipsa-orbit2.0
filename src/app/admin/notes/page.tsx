@@ -6,8 +6,11 @@ import { orbitStore } from '@/lib/store';
 import { Resource, ResourceType, Section } from '@/types';
 import { ResourceTypeBadge, SectionBadge } from '@/components/brand/StatusBadge';
 import { GlassCard } from '@/components/brand/GlassCard';
-import { 
-  BookOpen, 
+import { useAdminSection } from '@/lib/useAdminSection';
+import { SectionBanner } from '@/components/admin/SectionBanner';
+import { FilePickField, formatFileSize } from '@/components/admin/FilePickField';
+import {
+  BookOpen,
   Plus, 
   Trash2, 
   Edit3, 
@@ -28,6 +31,7 @@ export default function AdminNotesManager() {
     return orbitStore.subscribe(() => setTick((t) => t + 1));
   }, []);
 
+  const adminSection = useAdminSection();
   const subjects = orbitStore.getSubjects();
   const faculty = orbitStore.getFaculty();
   const allResources = orbitStore.getResources();
@@ -54,7 +58,7 @@ export default function AdminNotesManager() {
     setFormDescription('');
     setFormSubjectId(subjects[0]?.id || 'sub-la');
     setFormFacultyId(faculty[0]?.id || 'fac-reena-joshi');
-    setFormSection('Both');
+    setFormSection(adminSection);
     setFormType('pdf_notes');
     setFormFileName('');
     setFormFileSize('3.5 MB');
@@ -76,6 +80,19 @@ export default function AdminNotesManager() {
     setFormUnit(res.unit_or_module || 'Unit 1');
     setFormIsPublished(res.is_published);
     setModalOpen(true);
+  };
+
+  // Choosing a file fills in the name, size and format for the admin.
+  const handlePickFile = (file: File | null) => {
+    if (!file) return;
+    setFormFileName(file.name);
+    setFormFileSize(formatFileSize(file.size));
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'ppt' || ext === 'pptx') setFormType('ppt');
+    else if (ext === 'doc' || ext === 'docx') setFormType('doc');
+    else if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') setFormType('excel');
+    else if (ext === 'pdf') setFormType((t) => (t === 'ppt' || t === 'doc' || t === 'excel' ? 'pdf_notes' : t));
+    if (!formTitle.trim()) setFormTitle(file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
   };
 
   const handleSaveResource = (e: React.FormEvent) => {
@@ -130,6 +147,7 @@ export default function AdminNotesManager() {
   };
 
   const filteredResources = allResources.filter((r) => {
+    if (r.section !== 'Both' && r.section !== adminSection) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return r.title.toLowerCase().includes(q) || r.file_name.toLowerCase().includes(q);
@@ -138,6 +156,8 @@ export default function AdminNotesManager() {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6 animate-fadeIn">
+        <SectionBanner section={adminSection} />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
           <div>
@@ -376,6 +396,13 @@ export default function AdminNotesManager() {
                     />
                   </div>
                 </div>
+
+                <FilePickField
+                  label="Choose file from your phone or computer"
+                  fileName={formFileName}
+                  fileSize={formFileSize}
+                  onPick={handlePickFile}
+                />
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">

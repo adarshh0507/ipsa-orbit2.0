@@ -6,8 +6,11 @@ import { orbitStore } from '@/lib/store';
 import { Assignment, Priority, Section } from '@/types';
 import { PriorityBadge, SectionBadge } from '@/components/brand/StatusBadge';
 import { GlassCard } from '@/components/brand/GlassCard';
-import { 
-  FileCheck2, 
+import { useAdminSection } from '@/lib/useAdminSection';
+import { SectionBanner } from '@/components/admin/SectionBanner';
+import { FilePickField } from '@/components/admin/FilePickField';
+import {
+  FileCheck2,
   Plus, 
   Trash2, 
   Edit3, 
@@ -28,7 +31,10 @@ export default function AdminAssignmentsManager() {
 
   const subjects = orbitStore.getSubjects();
   const faculty = orbitStore.getFaculty();
-  const allAssignments = orbitStore.getAssignments();
+  const adminSection = useAdminSection();
+  const allAssignments = orbitStore
+    .getAssignments()
+    .filter((a) => a.section === 'Both' || a.section === adminSection);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
@@ -51,7 +57,7 @@ export default function AdminAssignmentsManager() {
     setDescription('');
     setSubjectId(subjects[0]?.id || 'sub-pps');
     setFacultyId(faculty[0]?.id || 'fac-amit-shrivastava');
-    setSection('Both');
+    setSection(adminSection);
     const future = new Date();
     future.setDate(future.getDate() + 7);
     setDueDate(future.toISOString().slice(0, 16));
@@ -122,6 +128,8 @@ export default function AdminAssignmentsManager() {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6 animate-fadeIn">
+        <SectionBanner section={adminSection} />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
           <div>
@@ -340,6 +348,14 @@ export default function AdminAssignmentsManager() {
                     />
                   </div>
                 </div>
+
+                <FilePickField
+                  label="Choose problem sheet file (optional)"
+                  fileName={attachmentName}
+                  onPick={(f) => {
+                    if (f) setAttachmentName(f.name);
+                  }}
+                />
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">

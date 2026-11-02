@@ -22,6 +22,7 @@ import {
   Menu,
   ShieldCheck,
   SquareCheckBig,
+  Sun,
   User,
   Users,
   X,
@@ -53,12 +54,11 @@ const mobileTabs = [
 
 const adminNavItems = [
   { label: 'Overview', href: '/admin', icon: House },
-  { label: 'Timetable Manager', href: '/admin/timetable', icon: CalendarDays },
   { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
+  { label: 'Notices', href: '/admin/announcements', icon: Bell },
   { label: 'Assignments', href: '/admin/assignments', icon: SquareCheckBig },
-  { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-  { label: 'Subjects & Faculty', href: '/admin/faculty', icon: Users },
-  { label: 'Students', href: '/admin/students', icon: User },
+  { label: 'Timetable', href: '/admin/timetable', icon: CalendarDays },
+  { label: 'Holidays', href: '/admin/holidays', icon: Sun },
 ];
 
 function SectionDropdown({ section, onChange }: { section: Section; onChange: (s: Section) => void }) {
@@ -276,8 +276,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
                 )}
               </Link>
               <Link
-                href={`${base}/profile`}
-                aria-label="My profile"
+                href={role === 'admin' ? '/admin' : `${base}/profile`}
+                aria-label={role === 'admin' ? 'Admin home' : 'My profile'}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-panel text-base font-bold text-ink hover:border-accent md:h-11 md:w-11"
               >
                 {initial}

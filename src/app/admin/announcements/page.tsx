@@ -6,8 +6,11 @@ import { orbitStore } from '@/lib/store';
 import { Announcement, AnnouncementCategory, Priority, Section } from '@/types';
 import { PriorityBadge, SectionBadge } from '@/components/brand/StatusBadge';
 import { GlassCard } from '@/components/brand/GlassCard';
-import { 
-  Bell, 
+import { useAdminSection } from '@/lib/useAdminSection';
+import { SectionBanner } from '@/components/admin/SectionBanner';
+import { FilePickField } from '@/components/admin/FilePickField';
+import {
+  Bell,
   Plus, 
   Trash2, 
   Edit3, 
@@ -25,9 +28,13 @@ export default function AdminAnnouncementsManager() {
     return orbitStore.subscribe(() => setTick((t) => t + 1));
   }, []);
 
-  const allAnnouncements = orbitStore.getAnnouncements();
+  const adminSection = useAdminSection();
+  const allAnnouncements = orbitStore
+    .getAnnouncements()
+    .filter((a) => a.target_section === 'Both' || a.target_section === adminSection);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [importantMode, setImportantMode] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
 
   // Form states
@@ -40,18 +47,26 @@ export default function AdminAnnouncementsManager() {
   const [attachmentName, setAttachmentName] = useState('');
   const [isPinned, setIsPinned] = useState(false);
 
-  const openAddModal = () => {
+  // important = true opens the form already set up as an urgent, pinned notice
+  const openAddModal = (important = false) => {
     setEditingAnnouncement(null);
+    setImportantMode(important);
     setTitle('');
     setDescription('');
-    setCategory('general');
-    setTargetSection('Both');
-    setPriority('normal');
+    setCategory(important ? 'urgent' : 'general');
+    setTargetSection(adminSection);
+    setPriority(important ? 'urgent' : 'normal');
     setDate(new Date().toISOString().split('T')[0]);
     setAttachmentName('');
-    setIsPinned(false);
+    setIsPinned(important);
     setModalOpen(true);
   };
+
+  // The "Important Notice" card on the admin hub links here with ?type=important
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('type') === 'important') openAddModal(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +97,8 @@ export default function AdminAnnouncementsManager() {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6 animate-fadeIn">
+        <SectionBanner section={adminSection} />
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
           <div>
@@ -94,13 +111,22 @@ export default function AdminAnnouncementsManager() {
             </p>
           </div>
 
-          <button
-            onClick={openAddModal}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/25 flex items-center gap-1.5 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Publish New Notice</span>
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => openAddModal(true)}
+              className="px-4 py-2.5 rounded-xl border border-red-500/50 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold flex items-center gap-1.5 transition-all"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Important Notice</span>
+            </button>
+            <button
+              onClick={() => openAddModal()}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/25 flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Publish New Notice</span>
+            </button>
+          </div>
         </div>
 
         {/* Notices Table */}
@@ -162,7 +188,9 @@ export default function AdminAnnouncementsManager() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
             <div className="relative w-full max-w-lg rounded-2xl bg-slate-950 border border-amber-500/30 shadow-2xl p-6">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">Broadcast New Notice</h3>
+                <h3 className="text-base font-bold text-white">
+                  {importantMode ? 'Post Important Notice' : 'Broadcast New Notice'}
+                </h3>
                 <button
                   onClick={() => setModalOpen(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-white"
@@ -262,6 +290,12 @@ export default function AdminAnnouncementsManager() {
                     className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
                   />
                 </div>
+
+                <FilePickField
+                  label="Attach a file (optional)"
+                  fileName={attachmentName}
+                  onPick={(f) => setAttachmentName(f ? f.name : '')}
+                />
 
                 <div className="flex items-center gap-2">
                   <input
