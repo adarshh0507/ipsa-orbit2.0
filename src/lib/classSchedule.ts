@@ -51,6 +51,15 @@ export function formatMinutes(total: number): string {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
+export function formatRange(startMin: number, endMin: number): string {
+  const a = formatMinutes(startMin);
+  const b = formatMinutes(endMin);
+  const [aTime, aSuffix] = a.split(' ');
+  const [, bSuffix] = b.split(' ');
+  // "9:45 to 11:25 AM" when both are in the same half of the day
+  return aSuffix === bSuffix ? `${aTime} to ${b}` : `${a} to ${b}`;
+}
+
 type RawDay = { first: string[]; second: string[]; third: string[]; activity: string | null };
 
 const RAW_SCHEDULE: Record<Section, Record<DayName, RawDay>> = {

@@ -1,64 +1,100 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Calendar, CheckCircle2, Coffee, MapPin, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Coffee, MapPin, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { orbitStore } from '@/lib/store';
-import { useNowMs } from '@/lib/useNowMs';
-import { LUNCH, formatMinutes, type ClassBlock, type Period } from '@/lib/classSchedule';
+import { TICK_MS, useClockTick } from '@/lib/useClock';
+import type { Section } from '@/types';
 import {
-  formatCountdown,
-  formatDateKey,
-  formatIstClock,
-  getLiveInfo,
-  resolveView,
-  type BlockStatus,
-} from '@/lib/timetableLogic';
+  DAY_NAMES,
+  LUNCH,
+  formatMinutes,
+  formatRange,
+  getDaySchedule,
+  type ClassBlock,
+  type DayName,
+  type Period,
+} from '@/lib/classSchedule';
 
-// The Excel timetable sheets list the activity's name for each day but not a time for it.
-const ACTIVITY_TIME_FALLBACK = 'TBA';
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
 
-const KIND_LABEL: Record<Period['kind'], string | null> = {
-  lecture: null,
+type BlockStatus = 'done' | 'live' | 'next' | 'upcoming';
+
+const KIND_LABEL: Record<Period['kind'], string> = {
+  lecture: 'Lecture',
   tutorial: 'Tutorial',
   lab: 'Lab',
   remedial: 'Remedial',
 };
 
-function StatusChip({ status }: { status: BlockStatus }) {
+const KIND_STYLE: Record<Period['kind'], string> = {
+  lecture: 'bg-sky-400/15 text-sky-200',
+  tutorial: 'bg-violet-400/15 text-violet-200',
+  lab: 'bg-amber-400/15 text-amber-200',
+  remedial: 'bg-slate-400/15 text-slate-200',
+};
+
+function SectionSwitch({ section, onChange }: { section: Section; onChange: (s: Section) => void }) {
+  const options: Section[] = ['DS-1', 'DS-2'];
+  return (
+    <div role="group" aria-label="Choose section" className="inline-flex rounded-xl bg-slate-800/80 p-1">
+      {options.map((opt) => {
+        const active = section === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(opt)}
+            className={`rounded-lg px-5 py-2 text-sm font-bold transition-colors ${
+              active ? 'bg-sky-400 text-slate-900' : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function StatusPill({ status, block, minutes, isToday }: { status: BlockStatus; block: ClassBlock; minutes: number; isToday: boolean }) {
   if (status === 'live') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/15 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cyan-400" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-bold text-emerald-200">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
         </span>
-        Live now
+        Going on now
       </span>
     );
   }
-  if (status === 'completed') {
+  if (status === 'next' && isToday) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-        <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-        Completed
+      <span className="inline-flex rounded-full bg-amber-400/20 px-3 py-1 text-xs font-bold text-amber-200">
+        Next, in {formatDuration(block.startMin - minutes)}
       </span>
     );
   }
-  return <span className="text-[11px] font-semibold text-slate-400">Upcoming</span>;
+  if (status === 'done') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+        Finished
+      </span>
+    );
+  }
+  return null;
 }
 
-interface LectureCardProps {
-  number: number;
-  block: ClassBlock;
-  status: BlockStatus;
-  showStatus: boolean;
-  minutes: number;
-  footer: string | null;
-}
-
-function LectureCard({ number, block, status, showStatus, minutes, footer }: LectureCardProps) {
+function BlockCard({ block, status, minutes, isToday }: { block: ClassBlock; status: BlockStatus; minutes: number; isToday: boolean }) {
   const progress =
     status === 'live'
       ? Math.min(100, Math.max(0, ((minutes - block.startMin) / (block.endMin - block.startMin)) * 100))
@@ -66,187 +102,173 @@ function LectureCard({ number, block, status, showStatus, minutes, footer }: Lec
 
   const frame =
     status === 'live'
-      ? 'border-cyan-400/60 bg-cyan-500/[0.07]'
-      : status === 'completed'
-        ? 'border-white/5 bg-slate-900/30 opacity-60'
-        : 'border-white/10 bg-slate-900/60';
+      ? 'border-emerald-400/60 bg-emerald-400/10'
+      : status === 'next'
+        ? 'border-amber-300/40 bg-slate-800/60'
+        : status === 'done'
+          ? 'border-white/5 bg-slate-800/30 opacity-70'
+          : 'border-white/10 bg-slate-800/50';
 
   return (
-    <div className={`flex h-full flex-col rounded-xl border p-3 transition-colors sm:p-4 ${frame}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-slate-400">Lecture {number}</p>
-        {showStatus && <StatusChip status={status} />}
+    <div className={`flex min-h-[200px] flex-col rounded-2xl border p-4 sm:p-5 ${frame}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-slate-300">{block.label}</p>
+          <p className="mt-0.5 text-sm font-bold text-white">{formatRange(block.startMin, block.endMin)}</p>
+        </div>
+        <StatusPill status={status} block={block} minutes={minutes} isToday={isToday} />
       </div>
 
-      <p className="mt-1 font-mono text-xs font-bold text-white sm:text-sm">
-        {formatMinutes(block.startMin)} – {formatMinutes(block.endMin)}
-      </p>
-
-      <div className="mt-2 flex-1 space-y-1.5">
-        {block.periods.map((period, i) => {
-          const kind = KIND_LABEL[period.kind];
-          return (
-            <div key={`${period.title}-${i}`}>
-              <p className="text-sm font-bold leading-snug text-white">
-                {period.title}
-                {kind && (
-                  <span className="ml-2 rounded border border-white/15 px-1.5 py-px align-middle text-[10px] font-semibold text-slate-300">
-                    {kind}
-                  </span>
-                )}
-              </p>
-              {(period.faculty || period.room) && (
-                <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
-                  {period.faculty && <span>{period.faculty}</span>}
-                  {period.room && (
-                    <span className="inline-flex items-center gap-0.5">
-                      <MapPin className="h-3 w-3" aria-hidden="true" />
-                      {period.room}
-                    </span>
-                  )}
-                </p>
+      <div className="mt-4 flex-1 space-y-3">
+        {block.periods.map((period, i) => (
+          <div key={`${period.title}-${i}`}>
+            <p className={`font-bold text-white ${i === 0 ? 'text-lg leading-snug' : 'text-base leading-snug'}`}>{period.title}</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-300">
+              <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${KIND_STYLE[period.kind]}`}>{KIND_LABEL[period.kind]}</span>
+              {period.faculty && <span>{period.faculty}</span>}
+              {period.room && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                  {period.room}
+                </span>
               )}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {status === 'live' && (
-        <div
-          className="mt-3 h-1 overflow-hidden rounded-full bg-slate-800"
-          role="progressbar"
-          aria-valuenow={Math.round(progress)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Lecture ${number} progress`}
-        >
-          <div className="h-full rounded-full bg-cyan-400" style={{ width: `${progress}%` }} />
+        <div className="mt-4">
+          <div
+            className="h-2 overflow-hidden rounded-full bg-slate-700"
+            role="progressbar"
+            aria-valuenow={Math.round(progress)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Class progress"
+          >
+            <div className="h-full rounded-full bg-emerald-300 transition-all duration-1000" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-1.5 text-xs text-slate-300">Ends in {formatDuration(block.endMin - minutes)}</p>
         </div>
       )}
-      {footer && <p className="mt-1.5 text-[11px] font-semibold text-amber-300">{footer}</p>}
     </div>
   );
 }
 
 export function TodaySchedule() {
-  const { section } = useAuth();
-  const nowMs = useNowMs();
-  const [, bump] = useState(0);
+  const { section, setSection } = useAuth();
+  const tick = useClockTick();
 
-  // Redraw when the admin adds or removes a holiday while this page is open.
-  useEffect(() => orbitStore.subscribe(() => bump((n) => n + 1)), []);
+  const title = (
+    <h2 className="text-xl font-bold text-white">Today&apos;s classes</h2>
+  );
 
-  // Before the browser clock is ready (server render), show a quiet placeholder.
-  if (nowMs === 0) {
+  // Before the browser clock is available (server render), show a quiet placeholder.
+  if (tick === 0) {
     return (
-      <div className="space-y-3" aria-hidden="true">
-        <div className="h-5 w-48 animate-pulse rounded bg-slate-800/60" />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl border border-white/5 bg-slate-900/40" />
-          ))}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          {title}
+          <SectionSwitch section={section} onChange={setSection} />
         </div>
-      </div>
+        <div className="h-52 animate-pulse rounded-2xl bg-slate-800/40" />
+      </section>
     );
   }
 
-  const view = resolveView(nowMs, section, orbitStore.getHolidays());
-  const { now, schedule } = view;
-  const live = schedule ? getLiveInfo(schedule.blocks, now.minutes, view.isToday) : null;
+  const now = new Date(tick * TICK_MS);
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  const todayName = DAY_NAMES[now.getDay()];
+  const isSunday = todayName === 'Sunday';
+  const viewDay: DayName = isSunday ? 'Monday' : (todayName as DayName);
+  const isToday = !isSunday;
+  const schedule = getDaySchedule(section, viewDay);
+
+  const statusOf = (block: ClassBlock): BlockStatus => {
+    if (!isToday) return 'upcoming';
+    if (minutes >= block.endMin) return 'done';
+    if (minutes >= block.startMin) return 'live';
+    return 'upcoming';
+  };
+
+  const statuses = schedule.blocks.map(statusOf);
+  const firstUpcoming = statuses.indexOf('upcoming');
+  if (isToday && firstUpcoming !== -1 && !statuses.includes('live')) {
+    statuses[firstUpcoming] = 'next';
+  }
+
+  const lastBlock = schedule.blocks[schedule.blocks.length - 1];
+  const allDone = isToday && minutes >= lastBlock.endMin;
+  const onLunch = isToday && minutes >= LUNCH.startMin && minutes < LUNCH.endMin;
+  const liveIndex = statuses.indexOf('live');
+
+  let summary = '';
+  if (isSunday) {
+    summary = 'No classes on Sunday. Here is the plan for Monday.';
+  } else if (liveIndex !== -1) {
+    const b = schedule.blocks[liveIndex];
+    summary = `Your ${b.label} is going on now. It ends at ${formatMinutes(b.endMin)}.`;
+  } else if (onLunch) {
+    summary = `Lunch break now. The 3rd class starts at ${formatMinutes(schedule.blocks[2].startMin)}.`;
+  } else if (allDone) {
+    summary = 'All classes are over for today.';
+  } else if (firstUpcoming !== -1) {
+    const b = schedule.blocks[firstUpcoming];
+    summary = `Your ${b.label} starts at ${formatMinutes(b.startMin)}, in ${formatDuration(b.startMin - minutes)}.`;
+  }
+
+  const dateLabel = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
-    <section className="space-y-3" aria-label={view.heading}>
-      <p className="text-xs text-slate-400">
-        {formatDateKey(now.dateKey)} · <span className="font-mono text-slate-200">{formatIstClock(now.minutes)}</span> IST
-      </p>
-
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-          <Calendar className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-          {view.heading}
-        </h2>
-        {view.targetKey && <p className="text-xs text-slate-400">{view.targetLabel} · Section {section}</p>}
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          {title}
+          <p className="mt-0.5 text-sm text-slate-400">
+            {dateLabel} · {formatMinutes(minutes)}
+          </p>
+        </div>
+        <SectionSwitch section={section} onChange={setSection} />
       </div>
 
-      {view.notices.map((notice) => (
-        <p
-          key={notice}
-          className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-200"
+      <p className="rounded-xl bg-slate-800/60 px-4 py-3 text-base font-medium text-white">{summary}</p>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {schedule.blocks.map((block, i) => (
+          <BlockCard key={block.id} block={block} status={statuses[i]} minutes={minutes} isToday={isToday} />
+        ))}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+            onLunch ? 'border-amber-300/50 bg-amber-300/10 text-amber-100' : 'border-white/10 bg-slate-800/30 text-slate-300'
+          }`}
         >
-          {notice}
-        </p>
-      ))}
+          <Coffee className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-semibold">Lunch</span>, {formatRange(LUNCH.startMin, LUNCH.endMin)}
+          </span>
+        </div>
 
-      {live && live.headline && <p className="text-sm font-semibold text-cyan-200">{live.headline}</p>}
-
-      {!schedule || !live ? (
-        <p className="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-6 text-center text-sm text-slate-300">
-          No Timetable Available
-        </p>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3 md:gap-3">
-            {schedule.blocks.map((block, i) => {
-              const status = live.statuses[i];
-              let footer: string | null = null;
-              if (view.isToday) {
-                if (status === 'live') {
-                  footer = `Ends in ${formatCountdown(block.endMin - now.minutes)}`;
-                } else if (status === 'upcoming' && i === live.nextIndex) {
-                  footer =
-                    live.liveIndex === -1
-                      ? `Starts in ${formatCountdown(block.startMin - now.minutes)}`
-                      : 'Up next';
-                }
-              }
-              return (
-                <LectureCard
-                  key={block.id}
-                  number={i + 1}
-                  block={block}
-                  status={status}
-                  showStatus={view.isToday}
-                  minutes={now.minutes}
-                  footer={footer}
-                />
-              );
-            })}
-          </div>
-
-          <p
-            className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] ${
-              live.onLunch || live.onShortBreak ? 'font-semibold text-amber-300' : 'text-slate-500'
+        {schedule.activity && (
+          <div
+            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+              allDone ? 'border-amber-300/50 bg-amber-300/10 text-amber-100' : 'border-white/10 bg-slate-800/30 text-slate-300'
             }`}
           >
-            <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>5-minute break between lectures 1 and 2</span>
-            <span aria-hidden="true">·</span>
+            <Sparkles className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
             <span>
-              Lunch {formatMinutes(LUNCH.startMin)} – {formatMinutes(LUNCH.endMin)}
+              <span className="font-semibold text-white">{schedule.activity}</span>, after the 3rd class
             </span>
-          </p>
-
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-slate-900/40 px-3 py-2.5">
-            <Sparkles className="h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-            <span className="text-xs font-semibold text-slate-400">Activity</span>
-            {schedule.activity ? (
-              <>
-                <span className="text-sm font-bold text-white">{schedule.activity}</span>
-                <span className="font-mono text-xs text-slate-400">{ACTIVITY_TIME_FALLBACK}</span>
-              </>
-            ) : (
-              <span className="text-sm text-slate-400">No Activity Scheduled</span>
-            )}
           </div>
-        </>
-      )}
+        )}
+      </div>
 
-      <Link
-        href="/student/timetable"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 hover:text-cyan-300"
-      >
-        <span>Full timetable</span>
-        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+      <Link href="/student/timetable" className="inline-flex items-center gap-1 text-sm font-semibold text-sky-300 hover:text-sky-200">
+        <span>Full week timetable</span>
+        <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </Link>
     </section>
   );

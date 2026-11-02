@@ -35,7 +35,7 @@ export function SectionPicker() {
               key={opt.section}
               type="button"
               onClick={() => setSection(opt.section)}
-              className={`rounded-xl border border-[#223260] bg-[#0E1A3D] px-4 py-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${opt.tone}`}
+              className={`rounded-xl border border-[#223260] bg-[#0E1A3D] px-4 py-5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${opt.tone}`}
             >
               <span className="block text-xl font-bold text-white">{opt.section}</span>
               <span className="mt-1 block text-xs text-slate-400">{opt.hall}</span>
