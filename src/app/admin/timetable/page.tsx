@@ -351,7 +351,7 @@ export default function AdminTimetableManager() {
                       onClick={() => setActiveDay(day)}
                       className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
                         activeDay === day
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
                           : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:text-white'
                       }`}
                     >
@@ -471,7 +471,7 @@ export default function AdminTimetableManager() {
                   onClick={() => setNextWeekAction('copy')}
                   className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
                     nextWeekAction === 'copy'
-                      ? 'border-cyan-400 bg-cyan-950/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
+                      ? 'border-cyan-400 bg-cyan-950/30'
                       : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
                   }`}
                 >
@@ -494,7 +494,7 @@ export default function AdminTimetableManager() {
                   onClick={() => setNextWeekAction('edit')}
                   className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
                     nextWeekAction === 'edit'
-                      ? 'border-violet-400 bg-violet-950/30 shadow-[0_0_15px_rgba(139,92,246,0.15)]'
+                      ? 'border-violet-400 bg-violet-950/30'
                       : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
                   }`}
                 >
@@ -517,7 +517,7 @@ export default function AdminTimetableManager() {
                   onClick={() => setNextWeekAction('blank')}
                   className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
                     nextWeekAction === 'blank'
-                      ? 'border-amber-400 bg-amber-950/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                      ? 'border-amber-400 bg-amber-950/30'
                       : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
                   }`}
                 >

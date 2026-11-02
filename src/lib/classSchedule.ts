@@ -9,6 +9,7 @@ export type PeriodKind = 'lecture' | 'tutorial' | 'lab' | 'remedial';
 export type BlockId = 'first' | 'second' | 'third';
 
 export interface Period {
+  code?: string;
   title: string;
   kind: PeriodKind;
   faculty?: string;
@@ -32,9 +33,9 @@ export interface DaySchedule {
 const toMin = (h: number, m: number) => h * 60 + m;
 
 export const BLOCK_TIMES: Record<BlockId, { label: string; startMin: number; endMin: number }> = {
-  first: { label: '1st class', startMin: toMin(9, 45), endMin: toMin(11, 25) },
-  second: { label: '2nd class', startMin: toMin(11, 30), endMin: toMin(13, 10) },
-  third: { label: '3rd class', startMin: toMin(13, 40), endMin: toMin(15, 20) },
+  first: { label: 'Lecture 1', startMin: toMin(9, 45), endMin: toMin(11, 25) },
+  second: { label: 'Lecture 2', startMin: toMin(11, 30), endMin: toMin(13, 10) },
+  third: { label: 'Lecture 3', startMin: toMin(13, 40), endMin: toMin(15, 20) },
 };
 
 export const LUNCH = { startMin: toMin(13, 10), endMin: toMin(13, 40) };
@@ -271,6 +272,7 @@ function parseCell(cell: string, section: Section): Period {
 
   if (isLab) {
     return {
+      code,
       title: subject.labTitle || `${subject.title} Lab`,
       kind: 'lab',
       faculty: FACULTY[section][code],
@@ -279,6 +281,7 @@ function parseCell(cell: string, section: Section): Period {
   }
 
   return {
+    code,
     title: isTutorial ? `${subject.title} Tutorial` : subject.title,
     kind: isTutorial ? 'tutorial' : 'lecture',
     faculty: FACULTY[section][code],

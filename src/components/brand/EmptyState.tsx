@@ -28,49 +28,49 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       defaultDesc: "Your department coordinator hasn't published this week's schedule yet. Check back soon or contact your class representative.",
       badgeColor: 'text-cyan-400 bg-cyan-950/40 border-cyan-800/50',
       iconGlow: 'from-cyan-500/20 to-indigo-500/20',
-      coreColor: '#38bdf8'
+      coreColor: 'var(--accent)'
     },
     notes: {
       defaultTitle: 'No Resources in Orbit',
       defaultDesc: 'No academic notes or reference materials match your active filters or subject selection.',
       badgeColor: 'text-violet-400 bg-violet-950/40 border-violet-800/50',
       iconGlow: 'from-violet-500/20 to-fuchsia-500/20',
-      coreColor: '#c084fc'
+      coreColor: 'var(--accent-2)'
     },
     assignments: {
       defaultTitle: 'All Orbital Tasks Cleared',
       defaultDesc: 'Zero pending assignments in orbit for your section. Enjoy your study time or review previous lecture units.',
       badgeColor: 'text-emerald-400 bg-emerald-950/40 border-emerald-800/50',
       iconGlow: 'from-emerald-500/20 to-cyan-500/20',
-      coreColor: '#34d399'
+      coreColor: 'var(--accent-strong)'
     },
     announcements: {
       defaultTitle: 'No New Announcements',
       defaultDesc: 'The orbital bulletin is quiet. Department notices, exam schedules, and circulars will appear here.',
       badgeColor: 'text-amber-400 bg-amber-950/40 border-amber-800/50',
       iconGlow: 'from-amber-500/20 to-orange-500/20',
-      coreColor: '#fbbf24'
+      coreColor: 'var(--accent-2)'
     },
     search: {
       defaultTitle: 'No Records Matched',
       defaultDesc: 'No academic records, faculty profiles, or notes matched your search query in this orbit.',
       badgeColor: 'text-sky-400 bg-sky-950/40 border-sky-800/50',
       iconGlow: 'from-sky-500/20 to-indigo-500/20',
-      coreColor: '#38bdf8'
+      coreColor: 'var(--accent)'
     },
     knowledge: {
       defaultTitle: 'Knowledge Base Empty',
       defaultDesc: 'No documents or extracted syllabus chunks uploaded to Orbit AI repository yet.',
       badgeColor: 'text-cyan-400 bg-cyan-950/40 border-cyan-800/50',
       iconGlow: 'from-cyan-500/20 to-indigo-500/20',
-      coreColor: '#06b6d4'
+      coreColor: 'var(--accent)'
     },
     generic: {
       defaultTitle: 'Nothing in This Orbit',
       defaultDesc: 'This section currently holds no active academic records.',
       badgeColor: 'text-cyan-400 bg-cyan-950/40 border-cyan-800/50',
       iconGlow: 'from-cyan-500/20 to-violet-500/20',
-      coreColor: '#38bdf8'
+      coreColor: 'var(--accent)'
     }
   };
 
@@ -102,7 +102,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             rx="62"
             ry="24"
             transform="rotate(-28 70 70)"
-            stroke="rgba(56, 189, 248, 0.25)"
+            stroke="var(--accent)" strokeOpacity="0.35"
             strokeWidth="1.5"
             strokeDasharray="5 5"
           />
@@ -113,20 +113,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             rx="56"
             ry="20"
             transform="rotate(38 70 70)"
-            stroke="rgba(192, 132, 252, 0.25)"
+            stroke="var(--accent-2)" strokeOpacity="0.35"
             strokeWidth="1.2"
           />
 
           {/* Satellite orbiter dots */}
-          <circle cx="22" cy="50" r="3.5" fill="#38bdf8">
+          <circle cx="22" cy="50" r="3.5" fill="var(--accent)">
             <animate attributeName="opacity" values="0.3;1;0.3" dur="2.4s" repeatCount="indefinite" />
           </circle>
-          <circle cx="118" cy="85" r="3" fill="#c084fc">
+          <circle cx="118" cy="85" r="3" fill="var(--accent-2)">
             <animate attributeName="opacity" values="1;0.4;1" dur="3s" repeatCount="indefinite" />
           </circle>
 
           {/* Central Planet */}
-          <circle cx="70" cy="70" r="24" fill="#0b1329" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" />
+          <circle cx="70" cy="70" r="24" fill="var(--panel)" stroke="var(--line)" strokeWidth="1.5" />
           <circle cx="70" cy="70" r="22" fill="url(#planet-glow)" />
 
           {/* Planet Rings & Atmospheric lines */}
@@ -139,16 +139,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           />
           <path
             d="M50 72 C60 76, 80 76, 90 72"
-            stroke="rgba(255,255,255,0.3)"
+            stroke="var(--line)"
             strokeWidth="1.2"
             strokeLinecap="round"
           />
 
           <defs>
             <radialGradient id="planet-glow" cx="40%" cy="35%" r="60%">
-              <stop offset="0%" stopColor="#1e293b" />
-              <stop offset="60%" stopColor="#0a0f1d" />
-              <stop offset="100%" stopColor="#040711" />
+              <stop offset="0%" stopColor="var(--panel)" />
+              <stop offset="60%" stopColor="var(--panel-alt)" />
+              <stop offset="100%" stopColor="var(--page)" />
             </radialGradient>
           </defs>
         </svg>

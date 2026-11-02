@@ -215,7 +215,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onClick={() => setLoginSection('DS-1')}
                     className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                       loginSection === 'DS-1'
-                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
                         : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
                     }`}
                   >
@@ -227,7 +227,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onClick={() => setLoginSection('DS-2')}
                     className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                       loginSection === 'DS-2'
-                        ? 'border-violet-400 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_rgba(139,92,246,0.25)]'
+                        ? 'border-violet-400 bg-violet-500/20 text-violet-300'
                         : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:border-slate-700'
                     }`}
                   >

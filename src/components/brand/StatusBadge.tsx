@@ -18,7 +18,7 @@ import {
 export const SectionBadge: React.FC<{ section: Section | 'Both'; className?: string }> = ({ section, className = '' }) => {
   if (section === 'DS-1') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.25)] ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 ${className}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
         DS-1
       </span>
@@ -26,7 +26,7 @@ export const SectionBadge: React.FC<{ section: Section | 'Both'; className?: str
   }
   if (section === 'DS-2') {
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-violet-950/80 text-violet-300 border border-violet-500/40 shadow-[0_0_10px_rgba(139,92,246,0.25)] ${className}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide bg-violet-950/80 text-violet-300 border border-violet-500/40 ${className}`}>
         <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
         DS-2
       </span>
@@ -43,14 +43,14 @@ export const PriorityBadge: React.FC<{ priority: Priority; className?: string }>
   switch (priority) {
     case 'urgent':
       return (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-rose-950/80 text-rose-300 border border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.3)] ${className}`}>
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-rose-950/80 text-rose-300 border border-rose-500/50 ${className}`}>
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
           Urgent
         </span>
       );
     case 'high':
       return (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-amber-950/80 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.25)] ${className}`}>
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-amber-950/80 text-amber-300 border border-amber-500/50 ${className}`}>
           High Priority
         </span>
       );

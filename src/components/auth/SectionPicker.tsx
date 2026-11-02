@@ -21,7 +21,7 @@ export function SectionPicker() {
       aria-labelledby="section-picker-title"
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" aria-hidden="true" />
-      <div className="modal-in relative w-full max-w-md rounded-2xl border border-[#223260] bg-[#0A1330] p-6 sm:p-8">
+      <div className="modal-in relative w-full max-w-md rounded-2xl border border-line bg-panel-alt p-6 sm:p-8">
         <h2 id="section-picker-title" className="font-display text-2xl font-bold text-white">
           {firstName ? `Welcome, ${firstName}.` : 'Welcome.'} Which section are you in?
         </h2>
@@ -35,7 +35,7 @@ export function SectionPicker() {
               key={opt.section}
               type="button"
               onClick={() => setSection(opt.section)}
-              className={`rounded-xl border border-[#223260] bg-[#0E1A3D] px-4 py-5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${opt.tone}`}
+              className={`rounded-xl border border-line bg-panel px-4 py-5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${opt.tone}`}
             >
               <span className="block text-xl font-bold text-white">{opt.section}</span>
               <span className="mt-1 block text-xs text-slate-400">{opt.hall}</span>

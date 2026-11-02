@@ -97,7 +97,7 @@ export default function StudentAnnouncementsPage() {
                 onClick={() => setSelectedCategory(c.value)}
                 className={`px-3 py-2 rounded-xl whitespace-nowrap font-medium transition-all ${
                   selectedCategory === c.value
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
                     : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:text-white'
                 }`}
               >

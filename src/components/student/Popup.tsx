@@ -32,7 +32,7 @@ export function Popup({ title, onClose, footerHref, footerLabel, children }: Pop
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="modal-in relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-[#152033]">
+      <div className="modal-in relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-panel">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <button

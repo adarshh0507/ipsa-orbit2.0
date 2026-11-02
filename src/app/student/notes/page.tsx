@@ -159,7 +159,7 @@ export default function NotesPage() {
               onClick={() => setSelectedType(t.value)}
               className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all ${
                 selectedType === t.value
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
                   : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:text-slate-200'
               }`}
             >

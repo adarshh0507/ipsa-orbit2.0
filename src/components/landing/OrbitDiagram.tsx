@@ -46,15 +46,15 @@ export function OrbitDiagram() {
     >
       <defs>
         <radialGradient id="sun-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFB454" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#FFB454" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--accent-2)" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="var(--accent-2)" stopOpacity="0" />
         </radialGradient>
       </defs>
 
       <circle cx={CX} cy={CY} r={120} fill="url(#sun-glow)" />
 
       {/* Faint outer guide ring */}
-      <circle cx={CX} cy={CY} r={262} fill="none" stroke="#223260" strokeDasharray="2 8" />
+      <circle cx={CX} cy={CY} r={262} fill="none" stroke="var(--line)" strokeDasharray="2 8" />
 
       {rings.map((ring) => (
         <g
@@ -62,7 +62,7 @@ export function OrbitDiagram() {
           className="orbit-ring"
           style={{ ['--orbit-time' as string]: `${ring.seconds}s` }}
         >
-          <circle cx={CX} cy={CY} r={ring.radius} fill="none" stroke="#5CE1E6" strokeOpacity="0.35" />
+          <circle cx={CX} cy={CY} r={ring.radius} fill="none" stroke="var(--accent)" strokeOpacity="0.35" />
           {ring.nodes.map((node) => {
             const rad = (node.angle * Math.PI) / 180;
             const x = CX + ring.radius * Math.cos(rad);
@@ -71,15 +71,15 @@ export function OrbitDiagram() {
             return (
               <g key={node.label} transform={`translate(${x} ${y})`}>
                 <g className="orbit-upright">
-                  <circle r={27} fill="#0E1A3D" stroke="#5CE1E6" strokeWidth={1.5} />
-                  <Icon x={-12} y={-12} width={24} height={24} stroke="#5CE1E6" strokeWidth={1.8} />
+                  <circle r={27} fill="var(--panel)" stroke="var(--accent)" strokeWidth={1.5} />
+                  <Icon x={-12} y={-12} width={24} height={24} stroke="var(--accent)" strokeWidth={1.8} />
                   <text
                     y={48}
                     textAnchor="middle"
                     fontSize={17}
                     fontWeight={600}
-                    fill="#E8EEFF"
-                    stroke="#060C20"
+                    fill="var(--ink)"
+                    stroke="var(--page)"
                     strokeWidth={5}
                     paintOrder="stroke"
                   >
@@ -92,8 +92,8 @@ export function OrbitDiagram() {
         </g>
       ))}
 
-      <circle cx={CX} cy={CY} r={42} fill="#FFB454" />
-      <text x={CX} y={CY + 5} textAnchor="middle" fontSize={15} fontWeight={800} fill="#2A1A00">
+      <circle cx={CX} cy={CY} r={42} fill="var(--accent-2)" />
+      <text x={CX} y={CY + 5} textAnchor="middle" fontSize={15} fontWeight={800} fill="var(--on-accent)">
         ORBIT
       </text>
     </svg>

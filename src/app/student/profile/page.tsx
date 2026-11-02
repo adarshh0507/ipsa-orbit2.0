@@ -106,7 +106,7 @@ export default function StudentProfilePage() {
                 onClick={() => setSection('DS-1')}
                 className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                   section === 'DS-1'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500'
                     : 'bg-slate-900 text-slate-400 border border-slate-800'
                 }`}
               >
@@ -116,7 +116,7 @@ export default function StudentProfilePage() {
                 onClick={() => setSection('DS-2')}
                 className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                   section === 'DS-2'
-                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
+                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500'
                     : 'bg-slate-900 text-slate-400 border border-slate-800'
                 }`}
               >

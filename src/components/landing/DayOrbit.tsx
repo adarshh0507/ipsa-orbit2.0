@@ -26,20 +26,20 @@ const stops: Stop[] = [
 export function DayOrbit() {
   return (
     <div className="w-full max-w-xl">
-      <p className="mb-3 text-sm text-[#8A98C0]">Your day, always up to date</p>
+      <p className="mb-3 text-sm text-muted">Your day, always up to date</p>
       <svg
         viewBox="0 0 600 130"
         className="h-auto w-full"
         role="img"
         aria-label="A day at college: class 1 at 9:45, class 2 at 11:30, lunch, class 3 at 1:40, then an activity class"
       >
-        <line x1={X0} y1={40} x2={X1} y2={40} stroke="#223260" strokeWidth={2} />
+        <line x1={X0} y1={40} x2={X1} y2={40} stroke="var(--line)" strokeWidth={2} />
 
         {stops.map((stop) => {
           const delay = Math.min(((stop.x - X0) / SPAN) * LOOP_SECONDS, LOOP_SECONDS - 0.4);
           const isLunch = stop.kind === 'lunch';
           const r = isLunch ? 9 : 17;
-          const stroke = isLunch ? '#FFB454' : '#5CE1E6';
+          const stroke = isLunch ? 'var(--accent-2)' : 'var(--accent)';
           return (
             <g key={stop.label}>
               <circle
@@ -48,20 +48,20 @@ export function DayOrbit() {
                 cx={stop.x}
                 cy={40}
                 r={r}
-                fill="#0E1A3D"
+                fill="var(--panel)"
                 stroke={stroke}
                 strokeWidth={1.5}
               />
               {stop.mark && (
-                <text x={stop.x} y={46} textAnchor="middle" fontSize={16} fontWeight={700} fill="#E8EEFF">
+                <text x={stop.x} y={46} textAnchor="middle" fontSize={16} fontWeight={700} fill="var(--ink)">
                   {stop.mark}
                 </text>
               )}
-              <text x={stop.x} y={84} textAnchor="middle" fontSize={17} fontWeight={600} fill="#E8EEFF">
+              <text x={stop.x} y={84} textAnchor="middle" fontSize={17} fontWeight={600} fill="var(--ink)">
                 {stop.label}
               </text>
               {stop.time && (
-                <text x={stop.x} y={106} textAnchor="middle" fontSize={15} fill="#8A98C0">
+                <text x={stop.x} y={106} textAnchor="middle" fontSize={15} fill="var(--muted)">
                   {stop.time}
                 </text>
               )}
@@ -70,8 +70,8 @@ export function DayOrbit() {
         })}
 
         <g className="day-dot" style={{ ['--loop-time' as string]: `${LOOP_SECONDS}s`, ['--dot-travel' as string]: `${SPAN}px` }}>
-          <circle cx={X0} cy={40} r={16} fill="#FFB454" fillOpacity={0.25} />
-          <circle cx={X0} cy={40} r={7} fill="#FFB454" />
+          <circle cx={X0} cy={40} r={16} fill="var(--accent-2)" fillOpacity={0.25} />
+          <circle cx={X0} cy={40} r={7} fill="var(--accent-2)" />
         </g>
       </svg>
     </div>

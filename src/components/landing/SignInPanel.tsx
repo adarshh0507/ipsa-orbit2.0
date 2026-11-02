@@ -57,16 +57,16 @@ export function SignInPanel({ onOtherOptions, heading = 'Sign in to IPSA ORBIT' 
   };
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-[#223260] bg-[#0E1A3D]/80 p-6">
-      <h2 className="font-display text-xl font-semibold text-[#E8EEFF]">{heading}</h2>
-      <p className="mt-1 text-sm text-[#8A98C0]">Use the account you already have. A college email is not required.</p>
+    <div className="w-full max-w-md rounded-2xl border border-line bg-panel/80 p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">{heading}</h2>
+      <p className="mt-1 text-sm text-muted">Use the account you already have. A college email is not required.</p>
 
       <div className="mt-5 space-y-3">
         <button
           type="button"
           onClick={() => start('google')}
           disabled={pending !== null}
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6] disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
         >
           <GoogleMark />
           <span>{pending === 'google' ? 'Opening Google…' : 'Continue with Google'}</span>
@@ -76,7 +76,7 @@ export function SignInPanel({ onOtherOptions, heading = 'Sign in to IPSA ORBIT' 
           type="button"
           onClick={() => start('facebook')}
           disabled={pending !== null}
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#166fe0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6] disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#166fe0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
         >
           <FacebookMark />
           <span>{pending === 'facebook' ? 'Opening Facebook…' : 'Continue with Facebook'}</span>
@@ -84,7 +84,7 @@ export function SignInPanel({ onOtherOptions, heading = 'Sign in to IPSA ORBIT' 
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-[#FFB454]">
+        <p role="alert" className="mt-3 text-sm text-accent-2">
           {error}
         </p>
       )}
@@ -92,7 +92,7 @@ export function SignInPanel({ onOtherOptions, heading = 'Sign in to IPSA ORBIT' 
       <button
         type="button"
         onClick={onOtherOptions}
-        className="mt-5 text-sm text-[#5CE1E6] underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6]"
+        className="mt-5 text-sm text-accent underline underline-offset-4 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         Sign in with email or as an admin
       </button>

@@ -71,7 +71,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setSection('DS-1')}
                 className={`px-2.5 py-1 rounded-full font-bold transition-all ${
                   section === 'DS-1'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -81,7 +81,7 @@ export const Navbar: React.FC = () => {
                 onClick={() => setSection('DS-2')}
                 className={`px-2.5 py-1 rounded-full font-bold transition-all ${
                   section === 'DS-2'
-                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
+                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >

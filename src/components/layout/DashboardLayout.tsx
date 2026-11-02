@@ -1,31 +1,30 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components/brand/Logo';
 import { SectionPicker } from '@/components/auth/SectionPicker';
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Calendar, 
-  FileCheck2, 
-  Bell, 
-  Users, 
-  Bot, 
-  User, 
-  ShieldCheck, 
-  Menu, 
-  X, 
-  LogOut, 
-  ChevronRight, 
-  Sparkles,
-  Search,
-  BookMarked,
-  Brain,
-  SlidersHorizontal,
-  Home
+import { GlobalSearch } from '@/components/layout/GlobalSearch';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { orbitStore } from '@/lib/store';
+import { TICK_MS, useClockTick } from '@/lib/useClock';
+import type { Section } from '@/types';
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  House,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  SquareCheckBig,
+  User,
+  Users,
+  X,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -33,141 +32,156 @@ interface DashboardLayoutProps {
   role?: 'student' | 'admin';
 }
 
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role = 'student' }) => {
-  const pathname = usePathname();
-  const { user, section, setSection, logout, isAdmin, needsSectionChoice } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const studentNavItems = [
+  { label: 'Dashboard', href: '/student', icon: House },
+  { label: 'Notes & Resources', href: '/student/notes', icon: BookOpen },
+  { label: 'Timetable', href: '/student/timetable', icon: CalendarDays },
+  { label: 'Assignments', href: '/student/assignments', icon: SquareCheckBig },
+  { label: 'Announcements', href: '/student/announcements', icon: Bell },
+  { label: 'Faculty & Labs', href: '/student/faculty', icon: Users },
+  { label: 'My Profile', href: '/student/profile', icon: User },
+];
 
-  const studentNavItems = [
-    { label: 'Dashboard', href: '/student', icon: LayoutDashboard },
-    { label: 'Notes & Resources', href: '/student/notes', icon: BookOpen },
-    { label: 'Timetable', href: '/student/timetable', icon: Calendar },
-    { label: 'Assignments', href: '/student/assignments', icon: FileCheck2 },
-    { label: 'Announcements', href: '/student/announcements', icon: Bell },
-    { label: 'Faculty & Labs', href: '/student/faculty', icon: Users },
-    { label: 'My Profile', href: '/student/profile', icon: User },
-  ];
+const adminNavItems = [
+  { label: 'Overview', href: '/admin', icon: House },
+  { label: 'Timetable Manager', href: '/admin/timetable', icon: CalendarDays },
+  { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
+  { label: 'Assignments', href: '/admin/assignments', icon: SquareCheckBig },
+  { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+  { label: 'Subjects & Faculty', href: '/admin/faculty', icon: Users },
+  { label: 'Students', href: '/admin/students', icon: User },
+];
 
-  const adminNavItems = [
-    { label: 'Overview', href: '/admin', icon: LayoutDashboard },
-    { label: 'Timetable Manager', href: '/admin/timetable', icon: Calendar },
-    { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
-    { label: 'Assignments', href: '/admin/assignments', icon: FileCheck2 },
-    { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Subjects & Faculty', href: '/admin/faculty', icon: Users },
-    { label: 'Students', href: '/admin/students', icon: User },
-  ];
+function SectionDropdown({ section, onChange }: { section: Section; onChange: (s: Section) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const currentNav = role === 'admin' ? adminNavItems : studentNavItems;
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const options: Section[] = ['DS-1', 'DS-2'];
 
   return (
-    <div className="relative min-h-screen bg-[#0E1626] text-slate-100 flex flex-col md:flex-row">
-      {/* Mobile Top Header */}
-      <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-slate-950/90 backdrop-blur-xl border-b border-white/5">
-        <Logo size="sm" />
-        <div className="flex items-center gap-2">
-          {/* Section indicator */}
-          <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-            section === 'DS-1' ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/40' : 'bg-violet-950 text-violet-300 border border-violet-500/40'
-          }`}>
-            {section}
-          </span>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900"
-          >
-            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex items-center gap-2.5 rounded-full border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" aria-hidden="true" />
+        <span className="whitespace-nowrap">
+          <span className="hidden sm:inline">Semester 1 - </span>
+          {section}
+        </span>
+        <ChevronDown className="h-4 w-4 text-muted" aria-hidden="true" />
+      </button>
 
-      {/* Sidebar for Desktop & Mobile Overlay */}
+      {open && (
+        <ul role="listbox" aria-label="Choose section" className="absolute right-0 top-full z-40 mt-2 w-44 rounded-2xl border border-line bg-panel p-1.5 shadow-[var(--card-shadow)]">
+          {options.map((opt) => (
+            <li key={opt} role="option" aria-selected={section === opt}>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold text-ink hover:bg-panel-alt"
+              >
+                <span>Section {opt}</span>
+                {section === opt && <Check className="h-4 w-4 text-accent" aria-hidden="true" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role = 'student' }) => {
+  const pathname = usePathname();
+  const { user, section, setSection, logout, needsSectionChoice } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [, setStoreTick] = useState(0);
+  const tick = useClockTick();
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
+  useEffect(() => {
+    return orbitStore.subscribe(() => setStoreTick((t) => t + 1));
+  }, []);
+
+  const currentNav = role === 'admin' ? adminNavItems : studentNavItems;
+  const nowMs = tick * TICK_MS;
+
+  // Notices from the last 7 days drive the bell badge and the dot next to Announcements.
+  const recentNotices =
+    nowMs === 0
+      ? 0
+      : orbitStore
+          .getAnnouncements()
+          .filter((a) => a.target_section === 'Both' || a.target_section === section)
+          .filter((a) => nowMs - Date.parse(a.created_at) < 7 * 24 * 60 * 60 * 1000).length;
+
+  const initial = user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U';
+  const base = role === 'admin' ? '/admin' : '/student';
+
+  return (
+    <div className="relative flex min-h-screen flex-col bg-page text-ink md:flex-row">
+      {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0A1120] backdrop-blur-2xl border-r border-white/5 flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col justify-between border-r border-line bg-sidebar transition-transform duration-300 md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div>
-          {/* Sidebar Brand Header */}
-          <div className="p-5 border-b border-white/5 flex items-center justify-between">
-            <Logo size="sm" />
+          <div className="flex items-start justify-between px-5 pb-4 pt-6">
+            <Logo size="md" />
             <button
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-1 rounded-lg text-slate-400 hover:text-white"
+              type="button"
+              onClick={closeSidebar}
+              aria-label="Close menu"
+              className="rounded-lg p-1 text-muted hover:text-ink md:hidden"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
-          {/* Section Indicator & Switcher */}
-          <div className="px-5 py-3.5 bg-slate-900/40 border-b border-white/5">
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="text-slate-400 font-medium flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                Active Orbit:
-              </span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">B.Tech 1st Yr</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setSection('DS-1')}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                  section === 'DS-1'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
-                    : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                Section DS-1
-              </button>
-              <button
-                onClick={() => setSection('DS-2')}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                  section === 'DS-2'
-                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
-                    : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                Section DS-2
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="p-3 space-y-1">
+          <nav aria-label="Main" className="space-y-1.5 px-4 pt-6">
             {currentNav.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = item.href === base ? pathname === base : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-medium transition-all group ${
+                  onClick={closeSidebar}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-3.5 rounded-full px-4 py-3 text-[15px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                     isActive
-                      ? role === 'admin'
-                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
-                        : 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
+                      ? 'bg-gradient-to-r from-accent-strong to-accent-2 text-on-accent shadow-[var(--card-shadow)]'
+                      : 'text-ink-soft hover:bg-panel hover:text-ink'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      className={`w-4 h-4 transition-colors ${
-                        isActive
-                          ? role === 'admin'
-                            ? 'text-amber-400'
-                            : 'text-cyan-400'
-                          : 'text-slate-500 group-hover:text-slate-300'
-                      }`}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  {isActive && (
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        role === 'admin' ? 'bg-amber-400' : 'bg-cyan-400'
-                      }`}
-                    />
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.label === 'Announcements' && recentNotices > 0 && (
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-500" aria-label="New notices" />
                   )}
                 </Link>
               );
@@ -175,93 +189,88 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, role
           </nav>
         </div>
 
-        {/* Sidebar Footer with Role switcher / user info */}
-        <div className="p-4 border-t border-white/5 space-y-3">
-          {/* Switch Portal Button */}
-          {role === 'student' ? (
-            <Link
-              href="/admin"
-              className="w-full py-2 px-3 rounded-xl border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 text-amber-300 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Switch to Admin Panel</span>
-            </Link>
-          ) : (
-            <Link
-              href="/student"
-              className="w-full py-2 px-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-950/40 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>Back to Student Orbit</span>
-            </Link>
-          )}
+        <div className="space-y-3 p-4">
+          <Link
+            href={role === 'student' ? '/admin' : '/student'}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-xs font-semibold text-ink-soft hover:border-accent hover:text-accent"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{role === 'student' ? 'Switch to Admin Panel' : 'Back to Student Orbit'}</span>
+          </Link>
 
-          {/* User Profile Tile */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center flex-shrink-0 text-cyan-400 font-bold text-xs">
-                {user?.full_name ? user.full_name.charAt(0) : 'U'}
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-line bg-panel p-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-strong to-accent-2 text-base font-bold text-on-accent">
+                {initial}
               </div>
-              <div className="truncate">
-                <p className="text-xs font-semibold text-white truncate">
-                  {user?.full_name || (role === 'admin' ? 'Coordinator' : 'Student')}
-                </p>
-                <p className="text-[10px] text-slate-400 capitalize">
-                  {role === 'admin' ? 'Department Admin' : `${section} • 1st Year`}
-                </p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{user?.full_name || (role === 'admin' ? 'Coordinator' : 'Student')}</p>
+                <p className="truncate text-xs text-muted">{role === 'admin' ? 'Department Admin' : `${section} • 1st Year`}</p>
               </div>
             </div>
-
             <button
+              type="button"
               onClick={logout}
-              title="Logout"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-900 transition-colors"
+              title="Log out"
+              aria-label="Log out"
+              className="shrink-0 rounded-lg p-2 text-muted hover:bg-panel-alt hover:text-red-500"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 md:pl-64 flex flex-col min-h-screen relative z-10">
-        {/* Top Desktop Bar */}
-        <div className="hidden md:flex h-16 px-8 items-center justify-between border-b border-white/5 bg-slate-950/40 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-3">
+      {sidebarOpen && <div className="fixed inset-0 z-30 bg-black/60 md:hidden" onClick={closeSidebar} aria-hidden="true" />}
+
+      {/* Main */}
+      <main className="relative z-10 flex min-h-screen flex-1 flex-col md:pl-64">
+        {/* Top bar */}
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-page/90 px-4 py-3 backdrop-blur-md sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            className="rounded-lg p-2 text-ink hover:bg-panel md:hidden"
+          >
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          </button>
+
+          <div className="hidden min-w-0 flex-1 sm:block">
+            <GlobalSearch role={role} />
+          </div>
+          <div className="flex-1 sm:hidden" />
+
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <SectionDropdown section={section} onChange={setSection} />
+            <ThemeToggle />
             <Link
-              href="/"
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
+              href={`${base}/announcements`}
+              aria-label={recentNotices > 0 ? `Notices, ${recentNotices} new` : 'Notices'}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-line bg-panel text-ink hover:border-accent"
             >
-              <Home className="w-3.5 h-3.5" />
-              <span>Portal Home</span>
+              <Bell className="h-5 w-5" aria-hidden="true" />
+              {recentNotices > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+                  {recentNotices}
+                </span>
+              )}
             </Link>
-            <span className="text-slate-600">/</span>
-            <span className="text-xs font-semibold text-white capitalize">
-              {pathname.split('/')[2] || 'Dashboard'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Live Indian Standard Time indication */}
-            <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Semester 1 • Academic Orbit Live</span>
-            </div>
-
-            {/* Quick Section Badge */}
-            <div className="flex items-center gap-1 bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-800 text-xs">
-              <span className="text-slate-400 text-[11px]">Viewing:</span>
-              <span className={`font-bold ${section === 'DS-1' ? 'text-cyan-400' : 'text-violet-400'}`}>
-                {section}
-              </span>
-            </div>
+            <Link
+              href={`${base}/profile`}
+              aria-label="My profile"
+              className="hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-panel text-base font-bold text-ink hover:border-accent sm:flex"
+            >
+              {initial}
+            </Link>
           </div>
         </div>
 
-        {/* Page Content Body */}
-        <div className="p-4 sm:p-6 lg:p-8 flex-1 max-w-7xl w-full mx-auto">
-          {children}
+        <div className="border-b border-line px-4 py-3 sm:hidden">
+          <GlobalSearch role={role} />
         </div>
+
+        <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">{children}</div>
       </main>
 
       {role === 'student' && needsSectionChoice && <SectionPicker />}

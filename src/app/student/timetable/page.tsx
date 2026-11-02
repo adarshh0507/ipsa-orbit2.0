@@ -150,7 +150,7 @@ export default function StudentTimetablePage() {
                     onClick={() => setActiveDay(day)}
                     className={`px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
                       activeDay === day
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50'
                         : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:text-white'
                     }`}
                   >

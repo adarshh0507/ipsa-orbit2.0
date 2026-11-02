@@ -42,13 +42,13 @@ export function SignInModal({ open, onClose, onOtherOptions }: SignInModalProps)
     >
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
-      <div className="modal-in relative w-full max-w-md rounded-2xl bg-[#0A1330]">
+      <div className="modal-in relative w-full max-w-md rounded-2xl bg-panel-alt">
         <button
           ref={closeRef}
           type="button"
           onClick={onClose}
           aria-label="Close sign in"
-          className="absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-[#223260] bg-[#0E1A3D] text-[#E8EEFF] hover:bg-[#223260] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5CE1E6]"
+          className="absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel text-ink hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
