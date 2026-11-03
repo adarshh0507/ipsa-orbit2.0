@@ -303,3 +303,31 @@ export function getDaySchedule(section: Section, day: DayName): DaySchedule {
     })),
   };
 }
+
+// Who teaches what, built from the same tables as the timetable above.
+// A subject taught by the same person in DS-1 and DS-2 lists both sections.
+export interface FacultyEntry {
+  name: string;
+  subjects: { code: string; title: string; sections: Section[] }[];
+}
+
+export function getFacultyDirectory(): FacultyEntry[] {
+  const sections: Section[] = ['DS-1', 'DS-2'];
+  const byName = new Map<string, FacultyEntry>();
+
+  for (const code of Object.keys(SUBJECTS)) {
+    const perFaculty = new Map<string, Section[]>();
+    for (const sec of sections) {
+      const name = FACULTY[sec][code];
+      if (!name) continue;
+      perFaculty.set(name, [...(perFaculty.get(name) ?? []), sec]);
+    }
+    perFaculty.forEach((secs, name) => {
+      const entry = byName.get(name) ?? { name, subjects: [] };
+      entry.subjects.push({ code, title: SUBJECTS[code].title, sections: secs });
+      byName.set(name, entry);
+    });
+  }
+
+  return Array.from(byName.values());
+}

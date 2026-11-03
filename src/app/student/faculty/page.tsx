@@ -1,241 +1,197 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useAuth } from '@/context/AuthContext';
-import { orbitStore, INITIAL_LABS } from '@/lib/store';
-import { SectionBadge } from '@/components/brand/StatusBadge';
+import { INITIAL_LABS } from '@/lib/store';
+import { getFacultyDirectory } from '@/lib/classSchedule';
 import { GlassCard } from '@/components/brand/GlassCard';
-import { 
-  Users, 
-  MapPin, 
-  Mail, 
-  Clock, 
-  BookOpen, 
-  FlaskConical, 
+import type { Section } from '@/types';
+import {
+  Users,
+  BookOpen,
+  FlaskConical,
   Search,
-  Sparkles,
-  ShieldCheck,
-  Building
+  Building,
 } from 'lucide-react';
 
+type Filter = 'all' | Section;
+
+// Colour for each kind of section tag (works in dark and light theme)
+function tone(sections: Section[]) {
+  if (sections.length > 1) return { pill: 'bg-accent/15 text-accent', bar: 'bg-accent', label: 'Both DS-1 & DS-2' };
+  if (sections[0] === 'DS-1') return { pill: 'bg-accent-2/20 text-accent-2', bar: 'bg-accent-2', label: 'DS-1' };
+  return { pill: 'bg-emerald-500/15 text-emerald-400', bar: 'bg-emerald-400', label: 'DS-2' };
+}
+
+const sameSections = (a: Section[], b: Section[]) => a.length === b.length && a.every((s) => b.includes(s));
+
 export default function StudentFacultyPage() {
-  const { section, setSection } = useAuth();
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    return orbitStore.subscribe(() => setTick((t) => t + 1));
-  }, []);
-
   const [activeTab, setActiveTab] = useState<'faculty' | 'labs'>('faculty');
+  const [filter, setFilter] = useState<Filter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const subjects = orbitStore.getSubjects();
-  const faculty = orbitStore.getFaculty();
-  const mappings = orbitStore.getFacultyMappings().filter((m) => m.section === section);
+  const directory = useMemo(() => getFacultyDirectory(), []);
 
-  // Group faculty with their taught subjects for this section
-  const sectionFacultyList = faculty.map((f) => {
-    const taughtSubjectIds = mappings.filter((m) => m.faculty_id === f.id).map((m) => m.subject_id);
-    const taughtSubjects = subjects.filter((s) => taughtSubjectIds.includes(s.id));
-    return {
-      ...f,
-      taughtSubjects
-    };
-  }).filter((f) => f.taughtSubjects.length > 0 || !mappings.some(m => m.section === section));
+  const visible = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return directory
+      .map((f) => ({
+        ...f,
+        subjects: f.subjects.filter((s) => filter === 'all' || s.sections.includes(filter)),
+      }))
+      .filter((f) => f.subjects.length > 0)
+      .filter((f) => !q || f.name.toLowerCase().includes(q) || f.subjects.some((s) => s.title.toLowerCase().includes(q)));
+  }, [directory, filter, searchQuery]);
 
-  const filteredFaculty = sectionFacultyList.filter((f) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const nameMatch = f.name.toLowerCase().includes(q);
-    const deptMatch = f.department.toLowerCase().includes(q);
-    const subMatch = f.taughtSubjects.some((s) => s.name.toLowerCase().includes(q) || s.short_name.toLowerCase().includes(q));
-    return nameMatch || deptMatch || subMatch;
-  });
+  const filters: { id: Filter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'DS-1', label: 'DS-1' },
+    { id: 'DS-2', label: 'DS-2' },
+  ];
 
   return (
     <DashboardLayout role="student">
-      <div className="space-y-6 animate-fadeIn">
+      <div className="mx-auto max-w-5xl space-y-5 animate-fadeIn">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
-          <div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-cyan-400" />
-              <h1 className="text-2xl font-black text-white">Faculty & Laboratory Directory</h1>
-              <SectionBadge section={section} />
-            </div>
-            <p className="text-slate-400 text-xs md:text-sm mt-1">
-              Connect with professors, find office cabin numbers, consultation hours, and research laboratory venues.
-            </p>
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
+              <Users className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <h1 className="font-display text-2xl font-extrabold text-ink sm:text-3xl">Faculty</h1>
           </div>
-
-          {/* Section Switcher */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">View Faculty For:</span>
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
-              <button
-                onClick={() => setSection('DS-1')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  section === 'DS-1' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-slate-400'
-                }`}
-              >
-                DS-1
-              </button>
-              <button
-                onClick={() => setSection('DS-2')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  section === 'DS-2' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50' : 'text-slate-400'
-                }`}
-              >
-                DS-2
-              </button>
-            </div>
-          </div>
+          <p className="mt-2 text-sm text-ink-soft">Who teaches which subject in DS-1 and DS-2.</p>
         </div>
 
-        {/* Tab & Search Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-white/10 text-xs font-semibold w-full sm:w-auto">
-            <button
-              onClick={() => setActiveTab('faculty')}
-              className={`flex-1 sm:flex-initial px-5 py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'faculty'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Teaching Faculty ({filteredFaculty.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('labs')}
-              className={`flex-1 sm:flex-initial px-5 py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'labs'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <FlaskConical className="w-4 h-4" />
-              <span>Department Laboratories ({INITIAL_LABS.length})</span>
-            </button>
-          </div>
-
-          {activeTab === 'faculty' && (
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search faculty or subject..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-          )}
+        {/* Tabs */}
+        <div className="flex w-full items-center gap-1 rounded-full border border-line bg-panel p-1 text-sm font-semibold sm:w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab('faculty')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-2 transition-colors sm:flex-initial ${
+              activeTab === 'faculty' ? 'bg-accent-strong text-on-accent' : 'text-ink-soft hover:text-ink'
+            }`}
+          >
+            <Users className="h-4 w-4" aria-hidden="true" />
+            Faculty
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('labs')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-2 transition-colors sm:flex-initial ${
+              activeTab === 'labs' ? 'bg-accent-strong text-on-accent' : 'text-ink-soft hover:text-ink'
+            }`}
+          >
+            <FlaskConical className="h-4 w-4" aria-hidden="true" />
+            Labs
+          </button>
         </div>
 
         {/* FACULTY TAB */}
         {activeTab === 'faculty' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredFaculty.map((fac) => (
-              <GlassCard
-                key={fac.id}
-                glow="cyan"
-                className="p-5 flex flex-col justify-between border border-white/5"
-              >
-                <div>
-                  {/* Avatar & Name */}
-                  <div className="flex items-center gap-3.5 mb-4">
-                    <div className="w-13 h-13 rounded-2xl overflow-hidden border border-cyan-500/30 bg-slate-900 flex-shrink-0">
-                      <img
-                        src={fac.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                        alt={fac.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">{fac.name}</h3>
-                      <p className="text-xs text-cyan-300 font-medium">{fac.title}</p>
-                      <p className="text-[11px] text-slate-400">{fac.department}</p>
-                    </div>
-                  </div>
+          <>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2" role="group" aria-label="Filter by section">
+                {filters.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFilter(f.id)}
+                    aria-pressed={filter === f.id}
+                    className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
+                      filter === f.id
+                        ? 'border-accent bg-accent/15 text-accent'
+                        : 'border-line bg-panel text-ink-soft hover:border-accent'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
 
-                  {/* Teaching Subjects in this section */}
-                  <div className="mb-4">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
-                      Teaching in {section}:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {fac.taughtSubjects.length > 0 ? (
-                        fac.taughtSubjects.map((s) => (
-                          <span
-                            key={s.id}
-                            className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-cyan-300 border border-slate-700"
-                          >
-                            {s.short_name} — {s.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-500">First Year Course Mentor</span>
-                      )}
-                    </div>
-                  </div>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search faculty or subject"
+                  aria-label="Search faculty or subject"
+                  className="w-full rounded-full border border-line bg-panel py-2 pl-10 pr-4 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
+                />
+              </div>
+            </div>
 
-                  {/* Location & Hours Box */}
-                  <div className="p-3 rounded-xl bg-slate-950/60 border border-white/5 space-y-2 text-xs text-slate-300 mb-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                      <span className="truncate">Cabin: <strong>{fac.cabin}</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
-                      <span className="truncate">Hours: {fac.office_hours}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="font-mono text-[11px] text-slate-400 truncate">{fac.email}</span>
-                    </div>
-                  </div>
-                </div>
+            {visible.length === 0 ? (
+              <p className="rounded-2xl border border-line bg-panel px-5 py-8 text-center text-sm text-ink-soft">
+                No faculty found.
+              </p>
+            ) : (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {visible.map((fac) => {
+                  // Side bar colour: the section colour when all subjects share it, otherwise the main accent
+                  const first = fac.subjects[0].sections;
+                  const bar = fac.subjects.every((s) => sameSections(s.sections, first)) ? tone(first).bar : 'bg-accent';
 
-                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>IPS Academy Indore</span>
-                  <span className="text-cyan-400 font-medium">Verified Faculty</span>
-                </div>
-              </GlassCard>
-            ))}
-          </div>
+                  return (
+                    <li
+                      key={fac.name}
+                      className="relative overflow-hidden rounded-2xl border border-line bg-panel py-4 pl-6 pr-4 shadow-[var(--card-shadow)]"
+                    >
+                      <span className={`absolute inset-y-0 left-0 w-1.5 ${bar}`} aria-hidden="true" />
+                      <h2 className="text-lg font-bold text-ink">{fac.name}</h2>
+
+                      <ul className="mt-3 space-y-2.5">
+                        {fac.subjects.map((s) => {
+                          const t = tone(s.sections);
+                          return (
+                            <li key={s.code} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                              <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink-soft">
+                                <BookOpen className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                                {s.title}
+                              </span>
+                              <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${t.pill}`}>{t.label}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
 
         {/* LABS TAB */}
         {activeTab === 'labs' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {INITIAL_LABS.map((lab, index) => (
-              <GlassCard
-                key={index}
-                glow="violet"
-                className="p-6 border border-white/5 flex flex-col justify-between"
-              >
+              <GlassCard key={index} glow="violet" className="flex flex-col justify-between border border-white/5 p-6">
                 <div>
-                  <div className="w-10 h-10 rounded-xl bg-violet-950/80 border border-violet-500/30 flex items-center justify-center text-violet-400 mb-4">
-                    <FlaskConical className="w-5 h-5" />
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/30 bg-violet-950/80 text-violet-400">
+                    <FlaskConical className="h-5 w-5" />
                   </div>
-                  <h3 className="text-base font-bold text-white mb-2">{lab.name}</h3>
+                  <h3 className="mb-2 text-base font-bold text-white">{lab.name}</h3>
                   <div className="space-y-2 text-xs text-slate-300">
                     <div className="flex items-center gap-2">
-                      <Building className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                      <span>Venue: <strong className="text-white">{lab.location}</strong></span>
+                      <Building className="h-4 w-4 flex-shrink-0 text-cyan-400" />
+                      <span>
+                        Venue: <strong className="text-white">{lab.location}</strong>
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-violet-400 flex-shrink-0" />
-                      <span>Instructors: <span className="text-slate-300">{lab.faculty}</span></span>
+                      <Users className="h-4 w-4 flex-shrink-0 text-violet-400" />
+                      <span>
+                        Instructors: <span className="text-slate-300">{lab.faculty}</span>
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
+                <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-3 text-xs text-slate-400">
                   <span>Data Science First Year</span>
-                  <span className="text-emerald-400 font-semibold">Active Lab Unit</span>
+                  <span className="font-semibold text-emerald-400">Active Lab Unit</span>
                 </div>
               </GlassCard>
             ))}
