@@ -16,12 +16,14 @@ export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
 
-  // After Google or Facebook sends the person back here, take them to the student dashboard.
+  // After Google or Facebook sends the person back here, or when the installed app opens
+  // for someone who is already signed in, take them to the student dashboard.
   useEffect(() => {
     const returningFromProvider =
       window.location.hash.includes('access_token') ||
       new URLSearchParams(window.location.search).has('code');
-    if (!returningFromProvider) return;
+    const openedAsInstalledApp = window.matchMedia('(display-mode: standalone)').matches;
+    if (!returningFromProvider && !openedAsInstalledApp) return;
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) router.replace('/student');

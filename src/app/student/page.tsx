@@ -7,6 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TodaySchedule } from '@/components/student/TodaySchedule';
 import { Popup } from '@/components/student/Popup';
+import { InstallApp } from '@/components/pwa/InstallApp';
+import { noticeToText, whatsappShareUrl } from '@/lib/share';
 import { orbitStore } from '@/lib/store';
 import { TICK_MS, useClockTick } from '@/lib/useClock';
 import {
@@ -16,6 +18,7 @@ import {
   BookOpen,
   CalendarDays,
   ChevronRight,
+  Share2,
   SquareCheckBig,
   User,
   Users,
@@ -179,6 +182,7 @@ export default function StudentDashboard() {
               );
             })}
           </ul>
+          <InstallApp />
         </Popup>
       )}
 
@@ -225,6 +229,15 @@ export default function StudentDashboard() {
                     {n.title}
                   </p>
                   <p className="mt-1 line-clamp-3 text-sm text-ink-soft">{n.description}</p>
+                  <a
+                    href={whatsappShareUrl(noticeToText(section, n.title, n.description))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
+                  >
+                    <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Share on WhatsApp
+                  </a>
                 </li>
               ))}
             </ul>

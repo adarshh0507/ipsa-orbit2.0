@@ -16,6 +16,7 @@ import {
   DraftingCompass,
   MapPin,
   Pi,
+  Share2,
   Sparkles,
   Sun,
   User,
@@ -24,6 +25,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { scheduleToText, whatsappShareUrl } from '@/lib/share';
 import { TICK_MS, useClockTick } from '@/lib/useClock';
 import {
   DAY_NAMES,
@@ -291,7 +293,22 @@ export function TodaySchedule() {
             {schedule.activity}, after Lecture 3
           </span>
         )}
-        <Link href="/student/timetable" className="ml-auto inline-flex items-center gap-1 font-semibold text-accent hover:underline">
+        <a
+          href={whatsappShareUrl(
+            scheduleToText(
+              section,
+              viewDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }),
+              schedule
+            )
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 font-semibold text-ink hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+          <span>Share on WhatsApp</span>
+        </a>
+        <Link href="/student/timetable" className="inline-flex items-center gap-1 font-semibold text-accent hover:underline">
           <span>Full week timetable</span>
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>

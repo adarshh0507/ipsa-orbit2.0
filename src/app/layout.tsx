@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Bricolage_Grotesque } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider, THEME_INIT_SCRIPT } from '@/context/ThemeContext';
+import { PwaRegister } from '@/components/pwa/PwaRegister';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -34,7 +35,17 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: '/favicon.ico',
+    apple: '/icons/apple-touch-icon.png',
   },
+  appleWebApp: {
+    capable: true,
+    title: 'IPSA ORBIT',
+    statusBarStyle: 'black-translucent',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0B0908',
 };
 
 export default function RootLayout({
@@ -54,6 +65,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-page text-ink selection:bg-accent/30">
         <ThemeProvider>
+          <PwaRegister />
           <AuthProvider>
             {children}
           </AuthProvider>
