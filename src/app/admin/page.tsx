@@ -15,6 +15,7 @@ import {
   CalendarDays,
   ChevronLeft,
   GraduationCap,
+  Library,
   ShieldCheck,
   SquareCheckBig,
   Sun,
@@ -52,6 +53,14 @@ export default function AdminHubPage() {
   const holidays = orbitStore.getHolidays();
 
   const modules = [
+    {
+      title: 'Study Materials',
+      hint: 'PDF, PPT, DOC',
+      action: 'Upload materials',
+      href: '/admin/materials',
+      icon: Library,
+      tile: 'bg-sky-500/15 text-sky-400',
+    },
     {
       title: 'Notes & Resources',
       hint: `${notes.length} uploaded`,

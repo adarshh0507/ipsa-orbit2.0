@@ -18,6 +18,7 @@ import {
   Check,
   ChevronDown,
   House,
+  Library,
   LogOut,
   Menu,
   ShieldCheck,
@@ -35,6 +36,7 @@ interface DashboardLayoutProps {
 
 const studentNavItems = [
   { label: 'Dashboard', href: '/student', icon: House },
+  { label: 'Study Materials', href: '/student/materials', icon: Library },
   { label: 'Notes & Resources', href: '/student/notes', icon: BookOpen },
   { label: 'Timetable', href: '/student/timetable', icon: CalendarDays },
   { label: 'Assignments', href: '/student/assignments', icon: SquareCheckBig },
@@ -46,7 +48,7 @@ const studentNavItems = [
 // Bottom tab bar on phones (student side only)
 const mobileTabs = [
   { label: 'Home', href: '/student', icon: House },
-  { label: 'Notes', href: '/student/notes', icon: BookOpen },
+  { label: 'Materials', href: '/student/materials', icon: Library },
   { label: 'Classes', href: '/student/timetable', icon: CalendarDays },
   { label: 'Tasks', href: '/student/assignments', icon: SquareCheckBig },
   { label: 'Profile', href: '/student/profile', icon: User },
@@ -54,6 +56,7 @@ const mobileTabs = [
 
 const adminNavItems = [
   { label: 'Overview', href: '/admin', icon: House },
+  { label: 'Study Materials', href: '/admin/materials', icon: Library },
   { label: 'Notes & Resources', href: '/admin/notes', icon: BookOpen },
   { label: 'Notices', href: '/admin/announcements', icon: Bell },
   { label: 'Assignments', href: '/admin/assignments', icon: SquareCheckBig },
