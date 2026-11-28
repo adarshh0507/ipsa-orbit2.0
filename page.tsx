@@ -1,709 +1,431 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Popup } from '@/components/student/Popup';
 import { useAuth } from '@/context/AuthContext';
 import { orbitStore } from '@/lib/store';
-import { Section, DayOfWeek, SlotType, TimetableWeek, TimetableSlot } from '@/types';
-import { SectionBadge, SlotTypeBadge } from '@/components/brand/StatusBadge';
-import { GlassCard } from '@/components/brand/GlassCard';
-import { EmptyState } from '@/components/brand/EmptyState';
-import { 
-  Calendar, 
-  Clock, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Copy, 
-  CheckCircle2, 
-  Sparkles, 
-  Archive, 
-  X, 
-  ArrowRight,
-  RefreshCw,
+import {
+  CATEGORIES,
+  EXAMS,
+  SUBJECT_TINTS,
+  categoryLabel,
+  categoryOf,
+  examLabel,
+} from '@/lib/libraryStructure';
+import type { ExamType, Resource, ResourceCategory, Subject } from '@/types';
+import {
+  Atom,
+  BookOpen,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  ClipboardList,
+  Code2,
+  Download,
   Eye,
-  AlertCircle
+  FolderOpen,
+  GraduationCap,
+  History,
+  Lightbulb,
+  PencilRuler,
+  Search,
+  Sigma,
+  Zap,
+  type LucideIcon,
 } from 'lucide-react';
 
-export default function AdminTimetableManager() {
-  const { section: initialSection } = useAuth();
-  const [activeSection, setActiveSection] = useState<Section>(initialSection);
-  const [, setTick] = useState(0);
+const SUBJECT_ICONS: Record<string, LucideIcon> = {
+  LA: Sigma,
+  OMP: Atom,
+  EG: PencilRuler,
+  BCE: Building2,
+  'Basic Electronics': Zap,
+  PPS: Code2,
+  'Design Thinking': Lightbulb,
+};
 
-  useEffect(() => {
-    return orbitStore.subscribe(() => setTick((t) => t + 1));
-  }, []);
+const CATEGORY_ICONS: Record<ResourceCategory, LucideIcon> = {
+  notes: BookOpen,
+  assignment: ClipboardCheck,
+  pyq: History,
+};
+
+const EXAM_ICONS: Record<ExamType, LucideIcon> = {
+  mst1: ClipboardList,
+  mst2: ClipboardCheck,
+  final: GraduationCap,
+};
+
+// "other" holds old papers that were uploaded before the MST 1 / MST 2 / Final choice existed.
+type ExamChoice = ExamType | 'other';
+
+type Tint = (typeof SUBJECT_TINTS)[number];
+
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center rounded-3xl border border-dashed border-line bg-panel/50 px-6 py-14 text-center">
+      <FolderOpen className="h-10 w-10 text-accent" aria-hidden="true" />
+      <p className="mt-3 text-base font-semibold text-ink">{text}</p>
+      <p className="mt-1 text-sm text-ink-soft">New material shows up here as soon as your faculty uploads it.</p>
+    </div>
+  );
+}
+
+function FileRow({
+  r,
+  tint,
+  where,
+  onPreview,
+  onDownload,
+}: {
+  r: Resource;
+  tint: Tint;
+  where?: string;
+  onPreview: (r: Resource) => void;
+  onDownload: (r: Resource) => void;
+}) {
+  return (
+    <li className="flex flex-col gap-4 rounded-3xl border border-line bg-panel p-4 sm:flex-row sm:items-center sm:p-5">
+      <span className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl text-xs font-black uppercase ${tint.soft} ${tint.text}`}>
+        {(r.file_ext || 'pdf').slice(0, 4)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-base font-bold leading-snug text-ink">{r.title}</p>
+        {r.description && <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{r.description}</p>}
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
+          {r.unit_or_module && <span className={`rounded-full px-2.5 py-0.5 font-semibold ${tint.soft} ${tint.text}`}>{r.unit_or_module}</span>}
+          {r.file_size && <span>{r.file_size}</span>}
+          <span>{r.download_count} downloads</span>
+          {where && <span className="font-semibold">{where}</span>}
+        </p>
+      </div>
+      <div className="flex gap-2 sm:flex-col">
+        <button
+          type="button"
+          onClick={() => onPreview(r)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full border border-line px-4 py-2 text-sm font-semibold text-ink hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Eye className="h-4 w-4" aria-hidden="true" /> Preview
+        </button>
+        <button
+          type="button"
+          onClick={() => onDownload(r)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-accent-strong px-4 py-2 text-sm font-bold text-on-accent hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Download className="h-4 w-4" aria-hidden="true" /> Download
+        </button>
+      </div>
+    </li>
+  );
+}
+
+export default function NotesPage() {
+  const { section } = useAuth();
+  const [, setTick] = useState(0);
+  const [query, setQuery] = useState('');
+  const [subjectId, setSubjectId] = useState<string | null>(null);
+  const [category, setCategory] = useState<ResourceCategory | null>(null);
+  const [exam, setExam] = useState<ExamChoice | null>(null);
+  const [preview, setPreview] = useState<Resource | null>(null);
+
+  useEffect(() => orbitStore.subscribe(() => setTick((t) => t + 1)), []);
 
   const subjects = orbitStore.getSubjects();
   const faculty = orbitStore.getFaculty();
-  const mappings = orbitStore.getFacultyMappings().filter((m) => m.section === activeSection);
-  const allWeeks = orbitStore.getTimetableWeeks().filter((w) => w.section === activeSection);
+  const visible = orbitStore
+    .getResources()
+    .filter((r) => r.is_published && (r.section === 'Both' || r.section === section));
+  const tasks = orbitStore
+    .getAssignments()
+    .filter((a) => a.is_published && (a.section === 'Both' || a.section === section));
 
-  // Selected week ID
-  const [selectedWeekId, setSelectedWeekId] = useState<string>('');
+  const subject = subjects.find((s) => s.id === subjectId) ?? null;
+  const tintOf = (s: Subject) => SUBJECT_TINTS[Math.max(0, subjects.indexOf(s)) % SUBJECT_TINTS.length];
+  const facultyName = (id: string) => faculty.find((f) => f.id === id)?.name;
 
-  useEffect(() => {
-    if (allWeeks.length > 0 && (!selectedWeekId || !allWeeks.some(w => w.id === selectedWeekId))) {
-      setSelectedWeekId(allWeeks[allWeeks.length - 1].id);
-    }
-  }, [allWeeks, selectedWeekId]);
+  const inSubject = (s: Subject) => visible.filter((r) => r.subject_id === s.id);
+  const countIn = (s: Subject, c: ResourceCategory) =>
+    inSubject(s).filter((r) => categoryOf(r) === c).length +
+    (c === 'assignment' ? tasks.filter((a) => a.subject_id === s.id).length : 0);
 
-  const activeWeek = allWeeks.find((w) => w.id === selectedWeekId);
-  const activeSlots = activeWeek
-    ? orbitStore.getTimetableSlots().filter((s) => s.week_id === activeWeek.id)
+  const goHome = () => {
+    setSubjectId(null);
+    setCategory(null);
+    setExam(null);
+  };
+  const goSubject = () => {
+    setCategory(null);
+    setExam(null);
+  };
+
+  const download = (r: Resource) => {
+    orbitStore.incrementDownload(r.id);
+    if (r.file_url && r.file_url !== '#') window.open(r.file_url, '_blank', 'noopener,noreferrer');
+    else alert(`Download started: ${r.file_name}`);
+  };
+
+  const searching = query.trim().length > 0;
+  const results = searching
+    ? visible.filter((r) => {
+        const q = query.toLowerCase();
+        const sub = subjects.find((s) => s.id === r.subject_id);
+        return (
+          r.title.toLowerCase().includes(q) ||
+          (r.description || '').toLowerCase().includes(q) ||
+          (sub?.name || '').toLowerCase().includes(q) ||
+          (sub?.short_name || '').toLowerCase().includes(q)
+        );
+      })
     : [];
 
-  const days: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const [activeDay, setActiveDay] = useState<DayOfWeek>('Monday');
-
-  // Next Week Workflow Modal state
-  const [nextWeekModalOpen, setNextWeekModalOpen] = useState(false);
-  const [nextWeekAction, setNextWeekAction] = useState<'copy' | 'edit' | 'blank'>('copy');
-
-  // Slot Editor Modal state
-  const [slotModalOpen, setSlotModalOpen] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<TimetableSlot | null>(null);
-  const [slotDay, setSlotDay] = useState<DayOfWeek>('Monday');
-  const [slotStartTime, setSlotStartTime] = useState('09:30');
-  const [slotEndTime, setSlotEndTime] = useState('10:30');
-  const [slotSubjectId, setSlotSubjectId] = useState(subjects[0]?.id || 'sub-la');
-  const [slotFacultyId, setSlotFacultyId] = useState(faculty[0]?.id || 'fac-reena-joshi');
-  const [slotRoom, setSlotRoom] = useState('Room 204');
-  const [slotType, setSlotType] = useState<SlotType>('lecture');
-
-  // Automatically update suggested faculty when subject changes
-  const handleSubjectChange = (newSubjectId: string) => {
-    setSlotSubjectId(newSubjectId);
-    const map = mappings.find((m) => m.subject_id === newSubjectId);
-    if (map) {
-      setSlotFacultyId(map.faculty_id);
+  // --- the files shown at the last step ---
+  let files: Resource[] = [];
+  if (subject && category) {
+    files = inSubject(subject).filter((r) => categoryOf(r) === category);
+    if (category === 'pyq' && exam) {
+      files = files.filter((r) => (exam === 'other' ? !r.exam_type : r.exam_type === exam));
     }
+  }
+  const showFiles = !!subject && !!category && (category !== 'pyq' || exam !== null);
+
+  const crumbs: { label: string; onClick?: () => void }[] = [{ label: 'All subjects', onClick: subject ? goHome : undefined }];
+  if (subject) crumbs.push({ label: subject.short_name, onClick: category ? goSubject : undefined });
+  if (subject && category) crumbs.push({ label: categoryLabel(category), onClick: exam ? () => setExam(null) : undefined });
+  if (subject && category === 'pyq' && exam) crumbs.push({ label: exam === 'other' ? 'Other papers' : examLabel(exam) });
+
+  const back = () => {
+    if (exam) setExam(null);
+    else if (category) setCategory(null);
+    else goHome();
   };
-
-  const openAddSlotModal = (day: DayOfWeek) => {
-    setEditingSlot(null);
-    setSlotDay(day);
-    setSlotStartTime('09:30');
-    setSlotEndTime('10:30');
-    setSlotSubjectId(subjects[0]?.id || 'sub-la');
-    const defaultFac = mappings.find((m) => m.subject_id === subjects[0]?.id)?.faculty_id || faculty[0]?.id;
-    setSlotFacultyId(defaultFac);
-    setSlotRoom('Room 204');
-    setSlotType('lecture');
-    setSlotModalOpen(true);
-  };
-
-  const openEditSlotModal = (slot: TimetableSlot) => {
-    setEditingSlot(slot);
-    setSlotDay(slot.day_of_week);
-    setSlotStartTime(slot.start_time);
-    setSlotEndTime(slot.end_time);
-    setSlotSubjectId(slot.subject_id);
-    setSlotFacultyId(slot.faculty_id);
-    setSlotRoom(slot.room);
-    setSlotType(slot.slot_type);
-    setSlotModalOpen(true);
-  };
-
-  const handleSaveSlot = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeWeek) return;
-
-    if (editingSlot) {
-      orbitStore.updateTimetableSlot({
-        ...editingSlot,
-        day_of_week: slotDay,
-        start_time: slotStartTime,
-        end_time: slotEndTime,
-        subject_id: slotSubjectId,
-        faculty_id: slotFacultyId,
-        room: slotRoom,
-        slot_type: slotType
-      });
-    } else {
-      orbitStore.addTimetableSlot({
-        week_id: activeWeek.id,
-        section: activeSection,
-        day_of_week: slotDay,
-        start_time: slotStartTime,
-        end_time: slotEndTime,
-        subject_id: slotSubjectId,
-        faculty_id: slotFacultyId,
-        room: slotRoom,
-        slot_type: slotType
-      });
-    }
-
-    setSlotModalOpen(false);
-  };
-
-  const handleDeleteSlot = (id: string) => {
-    if (confirm('Are you sure you want to delete this class slot?')) {
-      orbitStore.deleteTimetableSlot(id);
-    }
-  };
-
-  const handlePublishWeek = () => {
-    if (!activeWeek) return;
-    orbitStore.publishTimetableWeek(activeWeek.id);
-    alert(`Week ${activeWeek.week_number} timetable officially published! Students can now see this schedule in their dashboard.`);
-  };
-
-  // NEXT WEEK WORKFLOW: 3 Distinct Options
-  const handleExecuteNextWeekWorkflow = () => {
-    const lastWeekNumber = allWeeks.length > 0 ? Math.max(...allWeeks.map(w => w.week_number)) : 0;
-    const targetWeekNumber = lastWeekNumber + 1;
-
-    // Calculate dates
-    const today = new Date();
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + (1 + 7 - today.getDay()) % 7);
-    const nextSaturday = new Date(nextMonday);
-    nextSaturday.setDate(nextMonday.getDate() + 5);
-
-    const startDate = nextMonday.toISOString().split('T')[0];
-    const endDate = nextSaturday.toISOString().split('T')[0];
-
-    if (nextWeekAction === 'copy' || nextWeekAction === 'edit') {
-      if (!activeWeek) {
-        alert('No active week found to copy from. Creating blank week instead.');
-        const newW = orbitStore.createTimetableWeek(activeSection, targetWeekNumber, startDate, endDate, 'draft');
-        setSelectedWeekId(newW.id);
-      } else {
-        const newWeek = orbitStore.copyTimetableToNextWeek(activeWeek.id, targetWeekNumber, startDate, endDate);
-        setSelectedWeekId(newWeek.id);
-        alert(`Cloned Week ${activeWeek.week_number} into Week ${targetWeekNumber} as a draft. Historical records preserved.`);
-      }
-    } else {
-      // Option 3: Create completely blank weekly plan
-      const newWeek = orbitStore.createTimetableWeek(activeSection, targetWeekNumber, startDate, endDate, 'draft');
-      setSelectedWeekId(newWeek.id);
-      alert(`Created blank Week ${targetWeekNumber} schedule.`);
-    }
-
-    setNextWeekModalOpen(false);
-  };
-
-  // One-click quick action: Repeat this timetable next week
-  const handleRepeatNextWeek = () => {
-    if (!activeWeek) return;
-    const targetWeekNumber = activeWeek.week_number + 1;
-    const today = new Date();
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + (1 + 7 - today.getDay()) % 7);
-    const nextSaturday = new Date(nextMonday);
-    nextSaturday.setDate(nextMonday.getDate() + 5);
-
-    const newWeek = orbitStore.copyTimetableToNextWeek(
-      activeWeek.id,
-      targetWeekNumber,
-      nextMonday.toISOString().split('T')[0],
-      nextSaturday.toISOString().split('T')[0]
-    );
-    setSelectedWeekId(newWeek.id);
-    alert(`Week ${activeWeek.week_number} timetable successfully repeated into Week ${targetWeekNumber} (Draft)!`);
-  };
-
-  // Seed sample timetable for quick evaluation
-  const handleSeedSample = () => {
-    const week = orbitStore.seedSampleTimetable(activeSection);
-    setSelectedWeekId(week.id);
-    alert(`Generated realistic First-Year B.Tech Data Science schedule for Section ${activeSection}!`);
-  };
-
-  const daySlots = activeSlots
-    .filter((s) => s.day_of_week === activeDay)
-    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   return (
-    <DashboardLayout role="admin">
-      <div className="space-y-6 animate-fadeIn">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-amber-400" />
-              <h1 className="text-2xl font-black text-white">Dynamic Timetable System</h1>
-              <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-950 text-amber-300 border border-amber-500/30">
-                Admin Builder
-              </span>
-            </div>
-            <p className="text-slate-400 text-xs md:text-sm mt-1">
-              Build weekly lecture and laboratory schedules. Use the 3-option Next Week Workflow to duplicate or evolve timetables without overwriting history.
-            </p>
-          </div>
-
-          {/* Section Switcher & Next Week Trigger */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
-              <button
-                onClick={() => setActiveSection('DS-1')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  activeSection === 'DS-1' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-slate-400'
-                }`}
-              >
-                DS-1
-              </button>
-              <button
-                onClick={() => setActiveSection('DS-2')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  activeSection === 'DS-2' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50' : 'text-slate-400'
-                }`}
-              >
-                DS-2
-              </button>
-            </div>
-
-            <button
-              onClick={() => setNextWeekModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 flex items-center gap-1.5 transition-all"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Next Week Workflow</span>
-            </button>
-          </div>
+    <DashboardLayout role="student">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-ink sm:text-3xl">Notes & Resources</h1>
+          <p className="mt-1 text-sm text-ink-soft">Pick a subject, then find its notes, assignments and previous year papers. Showing {section}.</p>
         </div>
 
-        {/* Status / History Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/70 border border-white/5">
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">Timetable Records ({activeSection}):</span>
-            {allWeeks.length > 0 ? (
-              <select
-                value={selectedWeekId}
-                onChange={(e) => setSelectedWeekId(e.target.value)}
-                className="py-1.5 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
-              >
-                {allWeeks.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    Week {w.week_number} ({w.start_date} to {w.end_date}) — [{w.status.toUpperCase()}]
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-xs font-semibold text-rose-400">No schedules recorded</span>
-            )}
-          </div>
-
-          {activeWeek && (
-            <div className="flex items-center gap-2">
-              {activeWeek.status === 'draft' ? (
-                <button
-                  onClick={handlePublishWeek}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Publish Schedule</span>
-                </button>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-xs font-semibold">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Status: Published to Students</span>
-                </span>
-              )}
-
-              <button
-                onClick={handleRepeatNextWeek}
-                title="Repeat this timetable into next week with 1 click"
-                className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Repeat Next Week</span>
-              </button>
-            </div>
-          )}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-soft" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Looking for something? Search by topic or subject"
+            aria-label="Search notes and resources"
+            className="w-full rounded-full border border-line bg-panel py-3 pl-12 pr-4 text-base text-ink placeholder:text-ink-soft focus:border-accent focus:outline-none"
+          />
         </div>
 
-        {/* Empty State when no timetable created yet */}
-        {allWeeks.length === 0 ? (
-          <div className="p-8 md:p-12 text-center rounded-3xl border border-white/10 bg-slate-950/60 backdrop-blur-xl">
-            <EmptyState
-              type="timetable"
-              title="No Timetable Published Yet"
-              description={`No timetable has been created for Section ${activeSection} yet. Timetables start blank as required.`}
-            />
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={() => setNextWeekModalOpen(true)}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-lg shadow-amber-500/20"
-              >
-                Create Blank Week 1
-              </button>
-              <button
-                onClick={handleSeedSample}
-                className="px-5 py-2.5 rounded-xl bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-900 transition-colors flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Generate Realistic Schedule for Testing</span>
-              </button>
-            </div>
-          </div>
+        {searching ? (
+          <section className="space-y-3">
+            <p className="text-sm font-semibold text-ink-soft">{results.length} result{results.length === 1 ? '' : 's'}</p>
+            {results.length === 0 ? <Empty text="Nothing matches your search." /> : <ul className="space-y-3">{results.map((r) => {
+                  const sub = subjects.find((x) => x.id === r.subject_id);
+                  return (
+                    <FileRow
+                      key={r.id}
+                      r={r}
+                      tint={sub ? tintOf(sub) : SUBJECT_TINTS[0]}
+                      where={sub ? `${sub.short_name} · ${categoryLabel(categoryOf(r))}` : undefined}
+                      onPreview={setPreview}
+                      onDownload={download}
+                    />
+                  );
+                })}</ul>}
+          </section>
         ) : (
-          <div className="space-y-6">
-            {/* Day Selector Tabs with Add Slot Trigger */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
-                {days.map((day) => {
-                  const count = activeSlots.filter((s) => s.day_of_week === day).length;
+          <>
+            {subject && (
+              <nav aria-label="You are here" className="flex flex-wrap items-center gap-1 text-sm">
+                <button type="button" onClick={back} className="mr-2 inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5 font-semibold text-ink hover:border-accent hover:text-accent">
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Back
+                </button>
+                {crumbs.map((c, i) => (
+                  <React.Fragment key={c.label}>
+                    {i > 0 && <ChevronRight className="h-4 w-4 text-ink-soft" aria-hidden="true" />}
+                    {c.onClick ? (
+                      <button type="button" onClick={c.onClick} className="font-semibold text-accent hover:underline">{c.label}</button>
+                    ) : (
+                      <span className="font-bold text-ink">{c.label}</span>
+                    )}
+                  </React.Fragment>
+                ))}
+              </nav>
+            )}
+
+            {/* Step 1: subjects */}
+            {!subject && (
+              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {subjects.map((s) => {
+                  const tint = tintOf(s);
+                  const Icon = SUBJECT_ICONS[s.short_name] || BookOpen;
+                  const fac = visible.find((r) => r.subject_id === s.id)?.faculty_id;
                   return (
                     <button
-                      key={day}
-                      onClick={() => setActiveDay(day)}
-                      className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 flex-shrink-0 ${
-                        activeDay === day
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
-                          : 'bg-slate-900/50 text-slate-400 border border-slate-800 hover:text-white'
-                      }`}
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSubjectId(s.id)}
+                      className="group relative overflow-hidden rounded-3xl border border-line bg-panel p-5 text-left transition duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-[var(--card-shadow)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
-                      <span>{day}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-400">
-                        {count}
+                      <span aria-hidden="true" className={`absolute -right-8 -top-8 h-32 w-32 rounded-full ${tint.soft}`} />
+                      <span aria-hidden="true" className={`absolute -bottom-10 -left-6 h-24 w-24 rounded-full opacity-60 ${tint.soft}`} />
+                      <span className={`relative flex h-14 w-14 items-center justify-center rounded-2xl ${tint.soft} ${tint.text}`}>
+                        <Icon className="h-7 w-7" aria-hidden="true" />
                       </span>
+                      <h2 className="relative mt-4 text-lg font-bold leading-snug text-ink">{s.name}</h2>
+                      <p className="relative mt-0.5 text-sm text-ink-soft">{fac ? facultyName(fac) : s.short_name}</p>
+                      <div className="relative mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                        {CATEGORIES.map((c) => (
+                          <span key={c.id} className={`rounded-full px-2.5 py-1 ${tint.soft} ${tint.text}`}>
+                            {countIn(s, c.id)} {c.short}
+                          </span>
+                        ))}
+                      </div>
+                      <ChevronRight className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-soft transition group-hover:translate-x-1 group-hover:text-accent" aria-hidden="true" />
                     </button>
                   );
                 })}
-              </div>
-
-              <button
-                onClick={() => openAddSlotModal(activeDay)}
-                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/20 flex items-center gap-1.5 flex-shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Class to {activeDay}</span>
-              </button>
-            </div>
-
-            {/* Slots for Active Day */}
-            {daySlots.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl border border-white/5 bg-slate-950/40">
-                <p className="text-slate-400 text-sm mb-3">
-                  No lecture or laboratory sessions added for <strong>{activeDay}</strong> yet.
-                </p>
-                <button
-                  onClick={() => openAddSlotModal(activeDay)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold inline-flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add First Class Slot</span>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {daySlots.map((slot) => {
-                  const sub = subjects.find((s) => s.id === slot.subject_id);
-                  const fac = faculty.find((f) => f.id === slot.faculty_id);
-
-                  return (
-                    <GlassCard
-                      key={slot.id}
-                      glow="none"
-                      className="p-5 border border-white/5 hover:border-amber-500/30 flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-amber-400">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>{slot.start_time} - {slot.end_time}</span>
-                          </div>
-                          <SlotTypeBadge type={slot.slot_type} />
-                        </div>
-
-                        <h3 className="text-base font-bold text-white mb-1">
-                          {sub?.name || 'Class Subject'}
-                        </h3>
-                        <p className="text-xs text-slate-400 mb-3">
-                          {sub?.short_name} • Instructor: <strong className="text-slate-200">{fac?.name}</strong>
-                        </p>
-
-                        <div className="p-2.5 rounded-xl bg-slate-950 border border-white/5 text-xs text-slate-300">
-                          <span>Venue: <strong>{slot.room}</strong></span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditSlotModal(slot)}
-                          className="p-1.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs"
-                          title="Edit Slot"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSlot(slot.id)}
-                          className="p-1.5 rounded-lg border border-rose-900/50 text-rose-400 hover:bg-rose-950/40 text-xs"
-                          title="Delete Slot"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </GlassCard>
-                  );
-                })}
-              </div>
+              </section>
             )}
-          </div>
-        )}
 
-        {/* NEXT WEEK WORKFLOW MODAL (PROMPT SECTION 8) */}
-        {nextWeekModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-            <div className="relative w-full max-w-xl rounded-2xl bg-slate-950 border border-amber-500/30 shadow-2xl p-6">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-base font-bold text-white">Next Week Timetable Workflow</h3>
+            {/* Step 2: Notes / Assignments / Previous Year Questions */}
+            {subject && !category && (
+              <section className="space-y-4">
+                <div className={`flex items-center gap-4 rounded-3xl border p-5 ${tintOf(subject).ring} ${tintOf(subject).soft}`}>
+                  {(() => {
+                    const Icon = SUBJECT_ICONS[subject.short_name] || BookOpen;
+                    return <Icon className={`h-9 w-9 shrink-0 ${tintOf(subject).text}`} aria-hidden="true" />;
+                  })()}
+                  <div>
+                    <h2 className="text-xl font-bold text-ink">{subject.name}</h2>
+                    <p className="text-sm text-ink-soft">What are you looking for?</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setNextWeekModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {CATEGORIES.map((c) => {
+                    const Icon = CATEGORY_ICONS[c.id];
+                    const tint = tintOf(subject);
+                    const n = countIn(subject, c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setCategory(c.id)}
+                        className="group relative overflow-hidden rounded-3xl border border-line bg-panel p-6 text-left transition duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-[var(--card-shadow)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <span aria-hidden="true" className={`absolute -right-6 -top-6 h-24 w-24 rounded-full ${tint.soft}`} />
+                        <span className={`relative flex h-14 w-14 items-center justify-center rounded-2xl ${tint.soft} ${tint.text}`}>
+                          <Icon className="h-7 w-7" aria-hidden="true" />
+                        </span>
+                        <h3 className="relative mt-4 text-lg font-bold text-ink">{c.label}</h3>
+                        <p className="relative mt-1 text-sm text-ink-soft">{c.blurb}</p>
+                        <p className={`relative mt-4 text-sm font-bold ${tint.text}`}>{n} {n === 1 ? 'item' : 'items'}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
-              <p className="text-xs text-slate-400 my-4">
-                Choose how you want to prepare the schedule for <strong>Section {activeSection}</strong>. Previous weeks are always maintained in historical records and never overwritten.
-              </p>
-
-              {/* Three Options */}
-              <div className="space-y-3 mb-6">
-                <label
-                  onClick={() => setNextWeekAction('copy')}
-                  className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
-                    nextWeekAction === 'copy'
-                      ? 'border-cyan-400 bg-cyan-950/30'
-                      : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="nextWeekOption"
-                    checked={nextWeekAction === 'copy'}
-                    onChange={() => setNextWeekAction('copy')}
-                    className="mt-1"
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">1. Keep Same Timetable</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Copy the previous week's complete schedule into a brand new week record. Perfect for regular lecture continuity.
-                    </p>
-                  </div>
-                </label>
-
-                <label
-                  onClick={() => setNextWeekAction('edit')}
-                  className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
-                    nextWeekAction === 'edit'
-                      ? 'border-violet-400 bg-violet-950/30'
-                      : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="nextWeekOption"
-                    checked={nextWeekAction === 'edit'}
-                    onChange={() => setNextWeekAction('edit')}
-                    className="mt-1"
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">2. Edit Existing Timetable</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Copy the previous schedule as a draft and allow adjusting selected classes or lab sessions without affecting past records.
-                    </p>
-                  </div>
-                </label>
-
-                <label
-                  onClick={() => setNextWeekAction('blank')}
-                  className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
-                    nextWeekAction === 'blank'
-                      ? 'border-amber-400 bg-amber-950/30'
-                      : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="nextWeekOption"
-                    checked={nextWeekAction === 'blank'}
-                    onChange={() => setNextWeekAction('blank')}
-                    className="mt-1"
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">3. Create New Timetable</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Start with a completely blank weekly plan. All slots start empty for custom scheduling.
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                <button
-                  onClick={() => setNextWeekModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleExecuteNextWeekWorkflow}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-xs font-bold text-white shadow-lg shadow-amber-500/25 flex items-center gap-1.5"
-                >
-                  <span>Proceed with Option</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SLOT CREATION / EDITING MODAL */}
-        {slotModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-            <div className="relative w-full max-w-lg rounded-2xl bg-slate-950 border border-cyan-500/30 shadow-2xl p-6">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <h3 className="text-base font-bold text-white">
-                  {editingSlot ? 'Edit Class Slot' : 'Add New Class Slot'} ({activeDay})
-                </h3>
-                <button
-                  onClick={() => setSlotModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveSlot} className="space-y-4 my-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Day of Week
-                    </label>
-                    <select
-                      value={slotDay}
-                      onChange={(e) => setSlotDay(e.target.value as DayOfWeek)}
-                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+            {/* Step 3 for papers: MST 1 / MST 2 / Final Sem Exam */}
+            {subject && category === 'pyq' && !exam && (
+              <section className="grid gap-4 sm:grid-cols-3">
+                {(() => {
+                  const papers = inSubject(subject).filter((r) => categoryOf(r) === 'pyq');
+                  const tint = tintOf(subject);
+                  const boxes: { id: ExamChoice; label: string; icon: LucideIcon; n: number }[] = EXAMS.map((e) => ({
+                    id: e.id,
+                    label: e.label,
+                    icon: EXAM_ICONS[e.id],
+                    n: papers.filter((p) => p.exam_type === e.id).length,
+                  }));
+                  const other = papers.filter((p) => !p.exam_type).length;
+                  if (other > 0) boxes.push({ id: 'other', label: 'Other papers', icon: FolderOpen, n: other });
+                  return boxes.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setExam(b.id)}
+                      className="group relative overflow-hidden rounded-3xl border border-line bg-panel p-6 text-left transition duration-200 hover:-translate-y-1 hover:border-accent hover:shadow-[var(--card-shadow)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
-                      {days.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
+                      <span aria-hidden="true" className={`absolute -right-6 -top-6 h-24 w-24 rounded-full ${tint.soft}`} />
+                      <span className={`relative flex h-14 w-14 items-center justify-center rounded-2xl ${tint.soft} ${tint.text}`}>
+                        <b.icon className="h-7 w-7" aria-hidden="true" />
+                      </span>
+                      <h3 className="relative mt-4 text-xl font-bold text-ink">{b.label}</h3>
+                      <p className={`relative mt-2 text-sm font-bold ${tint.text}`}>{b.n} {b.n === 1 ? 'paper' : 'papers'}</p>
+                    </button>
+                  ));
+                })()}
+              </section>
+            )}
+
+            {/* Final step: the files */}
+            {showFiles && subject && (
+              <section className="space-y-4">
+                {category === 'assignment' && tasks.filter((a) => a.subject_id === subject.id).length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-base font-bold text-ink">Tasks from your faculty</h3>
+                    <ul className="space-y-3">
+                      {tasks
+                        .filter((a) => a.subject_id === subject.id)
+                        .map((a) => (
+                          <li key={a.id}>
+                            <Link href="/student/assignments" className="flex items-center justify-between gap-3 rounded-3xl border border-line bg-panel p-4 hover:border-accent sm:p-5">
+                              <span>
+                                <span className="block text-base font-bold text-ink">{a.title}</span>
+                                <span className="mt-1 block text-sm text-ink-soft">
+                                  Due {new Date(a.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                </span>
+                              </span>
+                              <ChevronRight className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden="true" />
+                            </Link>
+                          </li>
+                        ))}
+                    </ul>
+                    {files.length > 0 && <h3 className="pt-2 text-base font-bold text-ink">Files</h3>}
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Slot Type
-                    </label>
-                    <select
-                      value={slotType}
-                      onChange={(e) => setSlotType(e.target.value as SlotType)}
-                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
-                    >
-                      <option value="lecture">Lecture</option>
-                      <option value="lab">Laboratory (Practical)</option>
-                      <option value="tutorial">Tutorial</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Start Time
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={slotStartTime}
-                      onChange={(e) => setSlotStartTime(e.target.value)}
-                      placeholder="09:30"
-                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      End Time
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={slotEndTime}
-                      onChange={(e) => setSlotEndTime(e.target.value)}
-                      placeholder="10:30"
-                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Subject
-                  </label>
-                  <select
-                    value={slotSubjectId}
-                    onChange={(e) => handleSubjectChange(e.target.value)}
-                    className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
-                  >
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.short_name} — {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Faculty Instructor
-                  </label>
-                  <select
-                    value={slotFacultyId}
-                    onChange={(e) => setSlotFacultyId(e.target.value)}
-                    className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
-                  >
-                    {faculty.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name} ({f.department})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Room / Laboratory Venue
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={slotRoom}
-                    onChange={(e) => setSlotRoom(e.target.value)}
-                    placeholder="Room 204 or Turing Lab 3"
-                    className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setSlotModalOpen(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-900"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-xs font-bold text-white shadow-lg shadow-cyan-500/25 flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Save Slot</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+                )}
+                {files.length === 0 ? (
+                  category === 'assignment' && tasks.some((a) => a.subject_id === subject.id) ? null : (
+                    <Empty text="Nothing here yet." />
+                  )
+                ) : (
+                  <ul className="space-y-3">{files.map((r) => <FileRow key={r.id} r={r} tint={tintOf(subject)} onPreview={setPreview} onDownload={download} />)}</ul>
+                )}
+              </section>
+            )}
+          </>
         )}
       </div>
+
+      {preview && (
+        <Popup title={preview.title} onClose={() => setPreview(null)}>
+          <div className="space-y-4">
+            <p className="text-sm text-ink-soft">{preview.description || 'Course material for first-year B.Tech Data Science.'}</p>
+            <p className="rounded-2xl bg-panel-alt p-4 text-sm text-ink-soft">
+              {preview.file_name}
+              {preview.file_size ? ` · ${preview.file_size}` : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                download(preview);
+                setPreview(null);
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent-strong px-5 py-3 text-sm font-bold text-on-accent hover:opacity-90"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" /> Download
+            </button>
+          </div>
+        </Popup>
+      )}
     </DashboardLayout>
   );
 }

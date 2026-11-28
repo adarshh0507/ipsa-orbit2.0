@@ -1,213 +1,529 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Logo } from '@/components/brand/Logo';
-import { Footer } from '@/components/layout/Footer';
-import { AuthModal } from '@/components/auth/AuthModal';
-import { OrbitDiagram } from '@/components/landing/OrbitDiagram';
-import { DayOrbit } from '@/components/landing/DayOrbit';
-import { SignInModal } from '@/components/landing/SignInModal';
-import { supabase } from '@/lib/supabase';
-import { about, alsoInside, features, founders } from '@/lib/siteContent';
+import React, { useState, useEffect } from 'react';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { orbitStore } from '@/lib/store';
+import { ExamType, Resource, ResourceCategory, ResourceType, Section } from '@/types';
+import { CATEGORIES, EXAMS, categoryLabel, categoryOf, examLabel } from '@/lib/libraryStructure';
+import { ResourceTypeBadge, SectionBadge } from '@/components/brand/StatusBadge';
+import { GlassCard } from '@/components/brand/GlassCard';
+import { useAdminSection } from '@/lib/useAdminSection';
+import { SectionBanner } from '@/components/admin/SectionBanner';
+import { FilePickField, formatFileSize } from '@/components/admin/FilePickField';
+import {
+  BookOpen,
+  Plus, 
+  Trash2, 
+  Edit3, 
+  Search, 
+  CheckCircle2, 
+  X, 
+  UploadCloud, 
+  FileText, 
+  ExternalLink,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 
-export default function LandingPage() {
-  const router = useRouter();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [signInOpen, setSignInOpen] = useState(false);
+export default function AdminNotesManager() {
+  const [, setTick] = useState(0);
 
-  // After Google or Facebook sends the person back here, or when the installed app opens
-  // for someone who is already signed in, take them to the student dashboard.
   useEffect(() => {
-    const returningFromProvider =
-      window.location.hash.includes('access_token') ||
-      new URLSearchParams(window.location.search).has('code');
-    const openedAsInstalledApp = window.matchMedia('(display-mode: standalone)').matches;
-    if (!returningFromProvider && !openedAsInstalledApp) return;
-
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) router.replace('/student');
-    });
-    return () => data.subscription.unsubscribe();
-  }, [router]);
-
-  const openSignIn = useCallback(() => setSignInOpen(true), []);
-  const closeSignIn = useCallback(() => setSignInOpen(false), []);
-  const openOtherOptions = useCallback(() => {
-    setSignInOpen(false);
-    setAuthModalOpen(true);
+    return orbitStore.subscribe(() => setTick((t) => t + 1));
   }, []);
 
+  const adminSection = useAdminSection();
+  const subjects = orbitStore.getSubjects();
+  const faculty = orbitStore.getFaculty();
+  const allResources = orbitStore.getResources();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+
+  // Form fields
+  const [formTitle, setFormTitle] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formSubjectId, setFormSubjectId] = useState(subjects[0]?.id || 'sub-la');
+  const [formFacultyId, setFormFacultyId] = useState(faculty[0]?.id || 'fac-reena-joshi');
+  const [formSection, setFormSection] = useState<Section | 'Both'>('Both');
+  const [formType, setFormType] = useState<ResourceType>('pdf_notes');
+  const [formCategory, setFormCategory] = useState<ResourceCategory>('notes');
+  const [formExam, setFormExam] = useState<ExamType>('mst1');
+  const [formFileName, setFormFileName] = useState('');
+  const [formFileSize, setFormFileSize] = useState('3.8 MB');
+  const [formUnit, setFormUnit] = useState('Unit 1');
+  const [formIsPublished, setFormIsPublished] = useState(true);
+
+  const openAddModal = () => {
+    setEditingResource(null);
+    setFormTitle('');
+    setFormDescription('');
+    setFormSubjectId(subjects[0]?.id || 'sub-la');
+    setFormFacultyId(faculty[0]?.id || 'fac-reena-joshi');
+    setFormSection(adminSection);
+    setFormType('pdf_notes');
+    setFormCategory('notes');
+    setFormExam('mst1');
+    setFormFileName('');
+    setFormFileSize('3.5 MB');
+    setFormUnit('Unit 1');
+    setFormIsPublished(true);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (res: Resource) => {
+    setEditingResource(res);
+    setFormTitle(res.title);
+    setFormDescription(res.description || '');
+    setFormSubjectId(res.subject_id);
+    setFormFacultyId(res.faculty_id);
+    setFormSection(res.section);
+    setFormType(res.resource_type === 'pyq' ? 'pdf_notes' : res.resource_type);
+    setFormCategory(categoryOf(res));
+    setFormExam(res.exam_type ?? 'mst1');
+    setFormFileName(res.file_name);
+    setFormFileSize(res.file_size || '3.5 MB');
+    setFormUnit(res.unit_or_module || 'Unit 1');
+    setFormIsPublished(res.is_published);
+    setModalOpen(true);
+  };
+
+  // Choosing a file fills in the name, size and format for the admin.
+  const handlePickFile = (file: File | null) => {
+    if (!file) return;
+    setFormFileName(file.name);
+    setFormFileSize(formatFileSize(file.size));
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'ppt' || ext === 'pptx') setFormType('ppt');
+    else if (ext === 'doc' || ext === 'docx') setFormType('doc');
+    else if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') setFormType('excel');
+    else if (ext === 'pdf') setFormType((t) => (t === 'ppt' || t === 'doc' || t === 'excel' ? 'pdf_notes' : t));
+    if (!formTitle.trim()) setFormTitle(file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
+  };
+
+  const handleSaveResource = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Papers are always stored as the "pyq" type. For notes and assignments the chosen file format is kept.
+    const savedType: ResourceType = formCategory === 'pyq' ? 'pyq' : formType;
+    const finalFileName = formFileName.trim() || `${formTitle.replace(/\s+/g, '_').slice(0, 24)}.${formType === 'ppt' ? 'pptx' : 'pdf'}`;
+
+    if (editingResource) {
+      orbitStore.updateResource({
+        ...editingResource,
+        title: formTitle,
+        description: formDescription,
+        subject_id: formSubjectId,
+        faculty_id: formFacultyId,
+        section: formSection,
+        resource_type: savedType,
+        category: formCategory,
+        exam_type: formCategory === 'pyq' ? formExam : undefined,
+        file_name: finalFileName,
+        file_size: formFileSize,
+        unit_or_module: formUnit,
+        is_published: formIsPublished
+      });
+    } else {
+      orbitStore.addResource({
+        title: formTitle,
+        description: formDescription,
+        subject_id: formSubjectId,
+        faculty_id: formFacultyId,
+        section: formSection,
+        resource_type: savedType,
+        category: formCategory,
+        exam_type: formCategory === 'pyq' ? formExam : undefined,
+        file_url: '#',
+        file_name: finalFileName,
+        file_size: formFileSize,
+        file_ext: formType === 'ppt' ? 'pptx' : 'pdf',
+        is_published: formIsPublished,
+        unit_or_module: formUnit
+      });
+    }
+
+    setModalOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this resource permanently from Orbit?')) {
+      orbitStore.deleteResource(id);
+    }
+  };
+
+  const togglePublish = (res: Resource) => {
+    orbitStore.updateResource({
+      ...res,
+      is_published: !res.is_published
+    });
+  };
+
+  const filteredResources = allResources.filter((r) => {
+    if (r.section !== 'Both' && r.section !== adminSection) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return r.title.toLowerCase().includes(q) || r.file_name.toLowerCase().includes(q);
+  });
+
   return (
-    <div className="font-sans min-h-screen bg-page text-ink">
-      {/* Header */}
-      <header className="border-b border-line/70">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Logo size="md" showTagline={false} />
-          <nav aria-label="Page sections" className="hidden items-center gap-8 text-sm text-muted md:flex">
-            <a href="#app" className="hover:text-white">What it does</a>
-            <a href="#about" className="hover:text-white">About</a>
-            <a href="#founders" className="hover:text-white">Founders</a>
-          </nav>
+    <DashboardLayout role="admin">
+      <div className="space-y-6 animate-fadeIn">
+        <SectionBanner section={adminSection} />
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
+          <div>
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-cyan-400" />
+              <h1 className="text-2xl font-black text-white">Notes & Resource Manager</h1>
+            </div>
+            <p className="text-slate-400 text-xs md:text-sm mt-1">
+              Upload, edit, and publish lecture notes, PPT decks, and question banks for DS-1 and DS-2.
+            </p>
+          </div>
+
           <button
-            type="button"
-            onClick={openSignIn}
-            className="rounded-lg border border-accent/60 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent hover:text-on-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            onClick={openAddModal}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center gap-1.5 transition-all"
           >
-            Sign in
+            <Plus className="w-4 h-4" />
+            <span>Upload New Resource</span>
           </button>
         </div>
-      </header>
 
-      <main>
-        {/* Hero */}
-        <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-8 lg:py-24">
-          <div>
-            <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-              Your whole class, in one place.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-              IPSA ORBIT is a web app for first-year B.Tech Data Science students at IPS Academy Indore. Notes, the
-              weekly timetable, assignments, faculty details and official notices all live here, so nobody has to dig
-              through WhatsApp groups.
-            </p>
-            <div className="mt-12">
-              <DayOrbit />
-            </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search uploaded materials by title or filename..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs md:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+          />
+        </div>
+
+        {/* Resources Table */}
+        <div className="rounded-2xl border border-white/5 bg-slate-950/60 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/5">
+                <tr>
+                  <th className="p-4">Title & File</th>
+                  <th className="p-4">Subject</th>
+                  <th className="p-4">Faculty</th>
+                  <th className="p-4">Target Section</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredResources.map((res) => {
+                  const sub = subjects.find((s) => s.id === res.subject_id);
+                  const fac = faculty.find((f) => f.id === res.faculty_id);
+
+                  return (
+                    <tr key={res.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-start gap-2.5">
+                          <ResourceTypeBadge type={res.resource_type} />
+                          <div>
+                            <p className="font-bold text-white max-w-sm truncate">{res.title}</p>
+                            <p className="text-[11px] text-slate-500 font-mono mt-0.5">{res.file_name} ({res.file_size})</p>
+                            <p className="mt-1 text-[11px] font-semibold text-cyan-300">
+                              {categoryLabel(categoryOf(res))}
+                              {res.exam_type ? ` · ${examLabel(res.exam_type)}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 font-semibold text-cyan-300">
+                        {sub?.short_name || 'Subject'}
+                      </td>
+                      <td className="p-4 text-slate-300">
+                        {fac?.name || 'Faculty'}
+                      </td>
+                      <td className="p-4">
+                        <SectionBadge section={res.section} />
+                      </td>
+                      <td className="p-4">
+                        <button
+                          onClick={() => togglePublish(res)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 transition-colors ${
+                            res.is_published
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'
+                          }`}
+                        >
+                          {res.is_published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                          <span>{res.is_published ? 'Published' : 'Draft'}</span>
+                        </button>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(res)}
+                            className="p-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300"
+                            title="Edit"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(res.id)}
+                            className="p-1.5 rounded-lg border border-rose-900/40 hover:bg-rose-950/40 text-rose-400"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <div className="flex justify-center lg:justify-end">
-            <OrbitDiagram />
-          </div>
-        </section>
+        {/* Resource Upload / Edit Modal */}
+        {modalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="relative w-full max-w-xl rounded-2xl bg-slate-950 border border-cyan-500/30 shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h3 className="text-base font-bold text-white">
+                  {editingResource ? 'Edit Academic Resource' : 'Upload Syllabus Resource'}
+                </h3>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-        {/* What it does */}
-        <section id="app" className="scroll-mt-8 border-t border-line/70 py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h2 className="font-display max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-              What the app does
-            </h2>
-            <p className="mt-4 max-w-xl text-muted">
-              Everything a student checks every day, in one app that works on a phone or a laptop.
-            </p>
+              <form onSubmit={handleSaveResource} className="space-y-4 my-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Resource Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    placeholder="e.g. PPS Unit 2: Pointers and Memory Architecture"
+                    className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
 
-            <div className="mt-16 space-y-24">
-              {features.map((feature, i) => (
-                <div key={feature.title} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                  <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
-                    <h3 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{feature.title}</h3>
-                    <p className="mt-4 max-w-lg leading-relaxed text-muted">{feature.body}</p>
-                    <ul className="mt-6 space-y-3">
-                      {feature.points.map((point) => (
-                        <li key={point} className="flex gap-3 text-ink">
-                          <span aria-hidden="true" className="mt-2.5 h-px w-4 shrink-0 bg-accent-2" />
-                          <span>{point}</span>
-                        </li>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Subject
+                    </label>
+                    <select
+                      value={formSubjectId}
+                      onChange={(e) => setFormSubjectId(e.target.value)}
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                    >
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.short_name} — {s.name}
+                        </option>
                       ))}
-                    </ul>
+                    </select>
                   </div>
 
-                  <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
-                    <div className="overflow-hidden rounded-xl border border-line bg-panel-alt shadow-2xl shadow-black/40">
-                      <div className="flex items-center gap-1.5 border-b border-line px-4 py-3" aria-hidden="true">
-                        <span className="h-2.5 w-2.5 rounded-full bg-line" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-line" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-line" />
-                      </div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={feature.image} alt={feature.imageAlt} className="block h-auto w-full" loading="lazy" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Faculty Author
+                    </label>
+                    <select
+                      value={formFacultyId}
+                      onChange={(e) => setFormFacultyId(e.target.value)}
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                    >
+                      {faculty.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="block text-xs font-semibold text-slate-300 mb-1.5">What are you adding?</p>
+                  <div className="grid grid-cols-3 gap-2" role="group" aria-label="Category">
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        aria-pressed={formCategory === c.id}
+                        onClick={() => setFormCategory(c.id)}
+                        className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition-colors ${
+                          formCategory === c.id
+                            ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                            : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {c.id === 'pyq' ? 'Previous Year Questions' : c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formCategory === 'pyq' && (
+                  <div>
+                    <p className="block text-xs font-semibold text-slate-300 mb-1.5">Which exam?</p>
+                    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Exam">
+                      {EXAMS.map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          aria-pressed={formExam === e.id}
+                          onClick={() => setFormExam(e.id)}
+                          className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition-colors ${
+                            formExam === e.id
+                              ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                              : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-600'
+                          }`}
+                        >
+                          {e.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
 
-            <div className="mt-24 grid gap-8 border-t border-line/70 pt-10 sm:grid-cols-3">
-              {alsoInside.map((item) => (
-                <div key={item.title}>
-                  <h3 className="font-display text-lg font-semibold">{item.title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted">{item.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* About */}
-        <section id="about" className="scroll-mt-8 border-t border-line/70 bg-panel-alt py-20">
-          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-20 lg:px-8">
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{about.heading}</h2>
-            <div>
-              {about.paragraphs.map((p) => (
-                <p key={p} className="mb-5 max-w-xl text-lg leading-relaxed text-ink-soft">
-                  {p}
-                </p>
-              ))}
-              <dl className="mt-8 divide-y divide-line border-y border-line">
-                {about.facts.map((fact) => (
-                  <div key={fact.label} className="flex justify-between gap-6 py-3 text-sm">
-                    <dt className="text-muted">{fact.label}</dt>
-                    <dd className="text-right font-medium">{fact.value}</dd>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Target Section
+                    </label>
+                    <select
+                      value={formSection}
+                      onChange={(e) => setFormSection(e.target.value as Section | 'Both')}
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                    >
+                      <option value="Both">Both (DS-1 & DS-2)</option>
+                      <option value="DS-1">Section DS-1 Only</option>
+                      <option value="DS-2">Section DS-2 Only</option>
+                    </select>
                   </div>
-                ))}
-              </dl>
-            </div>
-          </div>
-        </section>
 
-        {/* Founders */}
-        <section id="founders" className="scroll-mt-8 border-t border-line/70 py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h2 className="font-display text-center text-3xl font-bold tracking-tight sm:text-4xl">Meet the founders</h2>
-            <p className="mx-auto mt-4 max-w-xl text-center text-muted">The two people building IPSA ORBIT.</p>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Resource Format
+                    </label>
+                    <select
+                      value={formType}
+                      onChange={(e) => setFormType(e.target.value as ResourceType)}
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                    >
+                      <option value="pdf_notes">PDF Lecture Notes</option>
+                      <option value="ppt">PPT Slides Deck</option>
+                      <option value="practical_file">Practical / Drawing File</option>
+                      <option value="doc">Word / DOCX Document</option>
+                      <option value="excel">Excel Sheet</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="mt-12 flex flex-wrap justify-center gap-10 sm:gap-14">
-              {founders.map((founder) => (
-                <figure key={founder.name} className="w-full max-w-[260px]">
-                  <div className="overflow-hidden rounded-2xl border border-line bg-panel">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={founder.image}
-                      alt={founder.imageAlt}
-                      className="block aspect-[4/5] w-full object-cover object-top"
-                      loading="lazy"
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      {formCategory === 'pyq' ? 'Year / session (e.g. 2025)' : 'Module / Unit Reference'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formUnit}
+                      onChange={(e) => setFormUnit(e.target.value)}
+                      placeholder="e.g. Unit 2"
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
                     />
                   </div>
-                  <figcaption className="mt-5 text-center">
-                    <p className="font-display text-2xl font-semibold">{founder.name}</p>
-                    <p className="text-sm font-medium text-accent-2">{founder.role}</p>
-                    <p className="mx-auto mt-3 max-w-xs leading-relaxed text-muted">{founder.bio}</p>
-                  </figcaption>
-                </figure>
-              ))}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      File Size
+                    </label>
+                    <input
+                      type="text"
+                      value={formFileSize}
+                      onChange={(e) => setFormFileSize(e.target.value)}
+                      placeholder="e.g. 4.2 MB"
+                      className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <FilePickField
+                  label="Choose file from your phone or computer"
+                  fileName={formFileName}
+                  fileSize={formFileSize}
+                  onPick={handlePickFile}
+                />
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Filename
+                  </label>
+                  <input
+                    type="text"
+                    value={formFileName}
+                    onChange={(e) => setFormFileName(e.target.value)}
+                    placeholder="PPS_Unit2_Pointers.pdf"
+                    className="w-full py-2 px-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Description & Overview
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Detailed topics covered in this material..."
+                    className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="pubCheck"
+                    checked={formIsPublished}
+                    onChange={(e) => setFormIsPublished(e.target.checked)}
+                    className="rounded bg-slate-900 border-slate-700 text-cyan-500"
+                  />
+                  <label htmlFor="pubCheck" className="text-xs text-slate-300 font-semibold cursor-pointer">
+                    Publish immediately to student library
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-900"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-xs font-bold text-white shadow-lg shadow-cyan-500/25 flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Save Resource</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        </section>
-
-        {/* Closing sign-in */}
-        <section className="border-t border-line/70 bg-panel-alt py-20">
-          <div className="mx-auto flex max-w-7xl flex-col items-start gap-10 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-            <div className="max-w-lg">
-              <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Open your section’s orbit</h2>
-              <p className="mt-4 text-muted">
-                Sign in with Google or Facebook and see your timetable, notes and notices right away.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openSignIn}
-              className="rounded-xl bg-accent px-8 py-3.5 text-sm font-bold text-on-accent hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              Sign in
-            </button>
-          </div>
-        </section>
-      </main>
-
-      <Footer />
-
-      <SignInModal open={signInOpen} onClose={closeSignIn} onOtherOptions={openOtherOptions} />
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialTab="student_login" />
-    </div>
+        )}
+      </div>
+    </DashboardLayout>
   );
 }
