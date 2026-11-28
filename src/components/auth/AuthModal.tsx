@@ -29,7 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialTab = 'student_login'
 }) => {
-  const { loginAsStudent, loginAsAdmin, registerStudent, loginWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { loginAsStudent, loginAsAdmin, loginWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const [tab, setTab] = useState<'student_login' | 'student_register' | 'admin_login'>(initialTab);
 
   // Student Login State
@@ -50,10 +50,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Error messages
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
