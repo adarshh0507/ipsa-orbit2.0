@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { orbitStore } from '@/lib/store';
-import { Resource, ResourceType, Section } from '@/types';
+import { ExamType, Resource, ResourceCategory, ResourceType, Section } from '@/types';
+import { CATEGORIES, EXAMS, categoryLabel, categoryOf, examLabel } from '@/lib/libraryStructure';
 import { ResourceTypeBadge, SectionBadge } from '@/components/brand/StatusBadge';
 import { GlassCard } from '@/components/brand/GlassCard';
 import { useAdminSection } from '@/lib/useAdminSection';
@@ -47,6 +48,8 @@ export default function AdminNotesManager() {
   const [formFacultyId, setFormFacultyId] = useState(faculty[0]?.id || 'fac-reena-joshi');
   const [formSection, setFormSection] = useState<Section | 'Both'>('Both');
   const [formType, setFormType] = useState<ResourceType>('pdf_notes');
+  const [formCategory, setFormCategory] = useState<ResourceCategory>('notes');
+  const [formExam, setFormExam] = useState<ExamType>('mst1');
   const [formFileName, setFormFileName] = useState('');
   const [formFileSize, setFormFileSize] = useState('3.8 MB');
   const [formUnit, setFormUnit] = useState('Unit 1');
@@ -60,6 +63,8 @@ export default function AdminNotesManager() {
     setFormFacultyId(faculty[0]?.id || 'fac-reena-joshi');
     setFormSection(adminSection);
     setFormType('pdf_notes');
+    setFormCategory('notes');
+    setFormExam('mst1');
     setFormFileName('');
     setFormFileSize('3.5 MB');
     setFormUnit('Unit 1');
@@ -74,7 +79,9 @@ export default function AdminNotesManager() {
     setFormSubjectId(res.subject_id);
     setFormFacultyId(res.faculty_id);
     setFormSection(res.section);
-    setFormType(res.resource_type);
+    setFormType(res.resource_type === 'pyq' ? 'pdf_notes' : res.resource_type);
+    setFormCategory(categoryOf(res));
+    setFormExam(res.exam_type ?? 'mst1');
     setFormFileName(res.file_name);
     setFormFileSize(res.file_size || '3.5 MB');
     setFormUnit(res.unit_or_module || 'Unit 1');
@@ -97,6 +104,8 @@ export default function AdminNotesManager() {
 
   const handleSaveResource = (e: React.FormEvent) => {
     e.preventDefault();
+    // Papers are always stored as the "pyq" type. For notes and assignments the chosen file format is kept.
+    const savedType: ResourceType = formCategory === 'pyq' ? 'pyq' : formType;
     const finalFileName = formFileName.trim() || `${formTitle.replace(/\s+/g, '_').slice(0, 24)}.${formType === 'ppt' ? 'pptx' : 'pdf'}`;
 
     if (editingResource) {
@@ -107,7 +116,9 @@ export default function AdminNotesManager() {
         subject_id: formSubjectId,
         faculty_id: formFacultyId,
         section: formSection,
-        resource_type: formType,
+        resource_type: savedType,
+        category: formCategory,
+        exam_type: formCategory === 'pyq' ? formExam : undefined,
         file_name: finalFileName,
         file_size: formFileSize,
         unit_or_module: formUnit,
@@ -120,7 +131,9 @@ export default function AdminNotesManager() {
         subject_id: formSubjectId,
         faculty_id: formFacultyId,
         section: formSection,
-        resource_type: formType,
+        resource_type: savedType,
+        category: formCategory,
+        exam_type: formCategory === 'pyq' ? formExam : undefined,
         file_url: '#',
         file_name: finalFileName,
         file_size: formFileSize,
@@ -218,6 +231,10 @@ export default function AdminNotesManager() {
                           <div>
                             <p className="font-bold text-white max-w-sm truncate">{res.title}</p>
                             <p className="text-[11px] text-slate-500 font-mono mt-0.5">{res.file_name} ({res.file_size})</p>
+                            <p className="mt-1 text-[11px] font-semibold text-cyan-300">
+                              {categoryLabel(categoryOf(res))}
+                              {res.exam_type ? ` · ${examLabel(res.exam_type)}` : ''}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -334,6 +351,50 @@ export default function AdminNotesManager() {
                   </div>
                 </div>
 
+                <div>
+                  <p className="block text-xs font-semibold text-slate-300 mb-1.5">What are you adding?</p>
+                  <div className="grid grid-cols-3 gap-2" role="group" aria-label="Category">
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        aria-pressed={formCategory === c.id}
+                        onClick={() => setFormCategory(c.id)}
+                        className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition-colors ${
+                          formCategory === c.id
+                            ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                            : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {c.id === 'pyq' ? 'Previous Year Questions' : c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formCategory === 'pyq' && (
+                  <div>
+                    <p className="block text-xs font-semibold text-slate-300 mb-1.5">Which exam?</p>
+                    <div className="grid grid-cols-3 gap-2" role="group" aria-label="Exam">
+                      {EXAMS.map((e) => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          aria-pressed={formExam === e.id}
+                          onClick={() => setFormExam(e.id)}
+                          className={`rounded-xl border px-2 py-2.5 text-xs font-bold transition-colors ${
+                            formExam === e.id
+                              ? 'border-cyan-400 bg-cyan-500/15 text-cyan-300'
+                              : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-600'
+                          }`}
+                        >
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -361,7 +422,6 @@ export default function AdminNotesManager() {
                     >
                       <option value="pdf_notes">PDF Lecture Notes</option>
                       <option value="ppt">PPT Slides Deck</option>
-                      <option value="pyq">Previous Year Questions (PYQ)</option>
                       <option value="practical_file">Practical / Drawing File</option>
                       <option value="doc">Word / DOCX Document</option>
                       <option value="excel">Excel Sheet</option>
@@ -372,7 +432,7 @@ export default function AdminNotesManager() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Module / Unit Reference
+                      {formCategory === 'pyq' ? 'Year / session (e.g. 2025)' : 'Module / Unit Reference'}
                     </label>
                     <input
                       type="text"

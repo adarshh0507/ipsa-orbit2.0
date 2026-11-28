@@ -53,6 +53,9 @@ export type ResourceType =
   | 'pyq'
   | 'practical_file';
 
+export type ResourceCategory = 'notes' | 'assignment' | 'pyq';
+export type ExamType = 'mst1' | 'mst2' | 'final';
+
 export interface Resource {
   id: string;
   title: string;
@@ -69,6 +72,10 @@ export interface Resource {
   is_published: boolean;
   created_at: string;
   unit_or_module?: string;
+  // Where this file lives in the library: Subject > Category > (for PYQ) Exam.
+  // Older items have neither field; see categoryOf() / examOf().
+  category?: ResourceCategory;
+  exam_type?: ExamType;
 }
 
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
