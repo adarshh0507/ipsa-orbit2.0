@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, UserRole, Section } from '@/types';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -13,6 +13,8 @@ interface AuthContextType {
   loginAsStudent: (section: Section, name?: string, email?: string) => void;
   loginAsAdmin: (email?: string) => void;
   loginWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string, section: Section) => Promise<void>;
+  signUpWithEmail: (data: { name: string; email: string; password: string; section: Section; enrollmentNo?: string }) => Promise<boolean>;
   loginWithFacebook: () => Promise<void>;
   registerStudent: (data: { name: string; email: string; section: Section; enrollmentNo?: string }) => void;
   logout: () => void;
@@ -79,7 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Remember the section this person picked. First-time sign-ins get asked.
       const savedSection = localStorage.getItem(sectionStorageKey(authUser.id));
-      const chosenSection: Section = savedSection === 'DS-2' ? 'DS-2' : 'DS-1';
+      const metadataSection = metadata.section;
+      const chosenSection: Section = savedSection === 'DS-1' || savedSection === 'DS-2'
+        ? savedSection
+        : metadataSection === 'DS-2' ? 'DS-2' : 'DS-1';
 
       const googleUser: UserProfile = {
         id: authUser.id,
@@ -98,14 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (mounted) {
         setUser(googleUser);
         setSectionState(chosenSection);
-        setNeedsSectionChoice(savedSection !== 'DS-1' && savedSection !== 'DS-2');
+        setNeedsSectionChoice(savedSection !== 'DS-1' && savedSection !== 'DS-2' && metadataSection !== 'DS-1' && metadataSection !== 'DS-2');
         localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(googleUser));
       }
 
       return true;
     };
 
-    // Restore a real Supabase session first; fall back to the existing demo session.
+    // Restore the real Supabase session first. Only explicit demo logins use the local fallback.
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
 
@@ -123,12 +128,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(parsed);
         setSectionState(parsed.section || 'DS-1');
       } else {
-        // Default to a guest student DS-1 for instant preview
-        setUser(DEFAULT_DS1_STUDENT);
-        setSectionState('DS-1');
+        setUser(null);
       }
       } catch {
-        setUser(DEFAULT_DS1_STUDENT);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -139,6 +142,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session?.user) {
         applySupabaseUser(session.user);
+      } else if (_event === 'SIGNED_OUT') {
+        setUser(null);
+        setNeedsSectionChoice(false);
+        localStorage.removeItem('ipsa_orbit_active_user');
       }
     });
 
@@ -207,6 +214,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithEmail = async (email: string, password: string, sec: Section) => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please check the Vercel environment variables.');
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) throw error;
+    if (!data.user) throw new Error('Login could not be completed. Please try again.');
+    localStorage.setItem(sectionStorageKey(data.user.id), sec);
+    const metadata = data.user.user_metadata || {};
+    const fullName = metadata.full_name || metadata.name || email.split('@')[0];
+    const signedInUser: UserProfile = {
+      id: data.user.id,
+      email: data.user.email || email,
+      full_name: fullName,
+      role: 'student',
+      section: sec,
+      enrollment_no: metadata.enrollment_no || '',
+      avatar_url: metadata.avatar_url || metadata.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+      created_at: data.user.created_at || new Date().toISOString()
+    };
+    setUser(signedInUser);
+    setSectionState(sec);
+    setNeedsSectionChoice(false);
+    localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(signedInUser));
+  };
+
+  // Returns true when email confirmation is required before the first sign-in.
+  const signUpWithEmail = async (data: {
+    name: string; email: string; password: string; section: Section; enrollmentNo?: string
+  }): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please check the Vercel environment variables.');
+    }
+    const { data: result, error } = await supabase.auth.signUp({
+      email: data.email.trim(),
+      password: data.password,
+      options: {
+        data: {
+          full_name: data.name.trim(),
+          section: data.section,
+          enrollment_no: data.enrollmentNo || '',
+          role: 'student'
+        }
+      }
+    });
+    if (error) throw error;
+    if (result.user && result.session) {
+      localStorage.setItem(sectionStorageKey(result.user.id), data.section);
+      const profile: UserProfile = {
+        id: result.user.id,
+        email: result.user.email || data.email,
+        full_name: data.name.trim(),
+        role: 'student',
+        section: data.section,
+        enrollment_no: data.enrollmentNo || '',
+        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`,
+        created_at: result.user.created_at || new Date().toISOString()
+      };
+      setUser(profile);
+      setSectionState(data.section);
+      setNeedsSectionChoice(false);
+      localStorage.setItem('ipsa_orbit_active_user', JSON.stringify(profile));
+      return false;
+    }
+    return true;
+  };
+
   const loginWithGoogle = () => loginWithProvider('google');
   const loginWithFacebook = () => loginWithProvider('facebook');
 
@@ -239,6 +313,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginAsAdmin,
         loginWithGoogle,
         loginWithFacebook,
+        signInWithEmail,
+        signUpWithEmail,
         registerStudent,
         logout,
         setSection,
