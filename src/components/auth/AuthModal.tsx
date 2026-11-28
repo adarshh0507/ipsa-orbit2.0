@@ -29,7 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialTab = 'student_login'
 }) => {
-  const { loginAsStudent, loginAsAdmin, registerStudent, loginWithGoogle } = useAuth();
+  const { loginAsStudent, loginAsAdmin, registerStudent, loginWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const [tab, setTab] = useState<'student_login' | 'student_register' | 'admin_login'>(initialTab);
 
   // Student Login State
@@ -53,16 +53,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleStudentLogin = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentEmail || !studentPassword) {
       setError('Please provide student email and password');
       return;
     }
-    const nameGuess = studentEmail.split('@')[0].replace('.', ' ');
-    const formattedName = nameGuess.charAt(0).toUpperCase() + nameGuess.slice(1);
-    loginAsStudent(loginSection, formattedName, studentEmail);
-    onClose();
+    try {
+      setError(null);
+      setIsSubmitting(true);
+      await signInWithEmail(studentEmail, studentPassword, loginSection);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please check your email and password.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -74,19 +82,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleStudentRegister = (e: React.FormEvent) => {
+  const handleStudentRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName || !regEmail || !regPassword) {
       setError('Please fill in all mandatory fields');
       return;
     }
-    registerStudent({
-      name: regName,
-      email: regEmail,
-      section: regSection,
-      enrollmentNo: regEnrollment
-    });
-    onClose();
+    try {
+      setError(null);
+      setIsSubmitting(true);
+      const confirmationRequired = await signUpWithEmail({
+        name: regName,
+        email: regEmail,
+        password: regPassword,
+        section: regSection,
+        enrollmentNo: regEnrollment
+      });
+      if (confirmationRequired) {
+        setError('Registration successful. Please verify your email using the confirmation link, then log in.');
+        setTab('student_login');
+      } else {
+        onClose();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -273,7 +295,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="submit"
                 className="w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all mt-2"
               >
-                <span>Enter Orbit Dashboard</span>
+                <span>{isSubmitting ? 'Please wait...' : 'Enter Orbit Dashboard'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -401,7 +423,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="submit"
                 className="w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all mt-2"
               >
-                <span>Complete Registration & Join Orbit</span>
+                <span>{isSubmitting ? 'Creating account...' : 'Complete Registration & Join Orbit'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
